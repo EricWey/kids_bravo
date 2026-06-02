@@ -1,4 +1,4 @@
-const { db, ok, getOpenid, getChild } = require('./_shared/db')
+const { db, _, ok, getOpenid, getChild } = require('./_shared/db')
 
 function dateList(start, end) {
   const days = []
@@ -27,10 +27,25 @@ exports.main = async (event = {}) => {
   recordRes.data.forEach((record) => {
     map[record.date] = record.dailyTotal || 0
   })
+  const expenseRes = await db.collection('coin_transactions')
+    .where({
+      ownerOpenid: openid,
+      childId: event.childId,
+      type: _.in(['expense', 'exchange']),
+      voided: _.neq(true),
+      date: _.gte(event.start).and(_.lte(event.end))
+    })
+    .limit(100)
+    .get()
+  const expenseMap = {}
+  expenseRes.data.forEach((item) => {
+    expenseMap[item.date] = (expenseMap[item.date] || 0) + 1
+  })
   return ok({
     days: days.map((day) => ({
       ...day,
-      total: map[day.date] || 0
+      total: map[day.date] || 0,
+      expenseCount: expenseMap[day.date] || 0
     }))
   })
 }

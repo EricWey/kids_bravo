@@ -1,6 +1,6 @@
 <view class="page">
   <view class="hero">
-    <view class="hero-title">成就愿望</view>
+    <view class="hero-title">成长成就</view>
     <view class="hero-subtitle">把每天的小努力，换成看得见的成长勋章。</view>
   </view>
 
@@ -12,22 +12,4 @@
       <view class="muted">{{item.description}}</view>
     </view>
   </view>
-
-  <view class="section-title">愿望清单</view>
-  <view class="card wish-form">
-    <input class="field" placeholder="新的愿望" value="{{wishName}}" bindinput="onWishName" />
-    <input class="field" type="number" placeholder="需要金币" value="{{wishCost}}" bindinput="onWishCost" />
-    <button class="primary-button" bindtap="addWish">加入愿望</button>
-  </view>
-
-  <view wx:if="{{wishes.length}}" class="wish-list">
-    <view wx:for="{{wishes}}" wx:key="_id" class="card wish-card">
-      <view>
-        <view class="wish-name">{{item.name}}</view>
-        <view class="muted">{{item.costCoins}} 金币 · {{item.statusText}}</view>
-      </view>
-      <button class="secondary-button small" data-id="{{item._id}}" bindtap="redeemWish">兑换</button>
-    </view>
-  </view>
-  <view wx:else class="card empty">还没有愿望，写下一个小目标吧。</view>
 </view>

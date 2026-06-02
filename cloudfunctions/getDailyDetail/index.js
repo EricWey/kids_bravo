@@ -1,6 +1,44 @@
 const { db, _, ok, getOpenid, getTasks, recomputeChildStats, formatDate } = require('./_shared/db')
 const { CATEGORIES } = require('./_shared/templates')
 
+const DEFAULT_EXCHANGE_ITEMS = [
+  {
+    _id: 'preset_playground',
+    name: '游乐场游玩一次',
+    costCoins: 80,
+    description: '选择一个喜欢的游乐项目，开心玩一次。',
+    category: '游玩体验',
+    preset: true
+  },
+  {
+    _id: 'preset_movie',
+    name: '看电影一部',
+    costCoins: 60,
+    description: '和家人一起看一部喜欢的电影。',
+    category: '游玩体验',
+    preset: true
+  },
+  {
+    _id: 'preset_cartoon',
+    name: '动画片20分钟',
+    costCoins: 20,
+    description: '兑换一段约定好的动画片时间。',
+    category: '屏幕时间',
+    preset: true
+  }
+]
+
+function applyDateRange(query, startDate, endDate) {
+  if (startDate && endDate) {
+    query.date = _.gte(startDate).and(_.lte(endDate))
+  } else if (startDate) {
+    query.date = _.gte(startDate)
+  } else if (endDate) {
+    query.date = _.lte(endDate)
+  }
+  return query
+}
+
 function groupTasks(tasks, taskStates = {}) {
   return CATEGORIES.map((name) => ({
     name,
@@ -11,6 +49,13 @@ function groupTasks(tasks, taskStates = {}) {
         status: taskStates[task._id] ? taskStates[task._id].status : ''
       }))
   }))
+}
+
+function isCollectionMissing(error) {
+  const message = error && (error.message || error.errMsg || '')
+  return message.includes('DATABASE_COLLECTION_NOT_EXIST') ||
+    message.includes('collection not exists') ||
+    message.includes('Db or Table not exist')
 }
 
 exports.main = async (event = {}) => {
@@ -41,20 +86,75 @@ exports.main = async (event = {}) => {
   }
 
   if (event.includeTransactions) {
+    const txQuery = applyDateRange({ ownerOpenid: openid, childId, voided: _.neq(true) }, event.startDate, event.endDate)
     const tx = await db.collection('coin_transactions')
-      .where({ ownerOpenid: openid, childId, voided: _.neq(true) })
+      .where(txQuery)
+      .orderBy('date', 'desc')
       .orderBy('createdAt', 'desc')
-      .limit(50)
+      .limit(100)
       .get()
     data.transactions = tx.data
   }
 
-  if (event.includeAchievements) {
+  if (event.includeExpenses) {
+    const expenseQuery = applyDateRange({
+      ownerOpenid: openid,
+      childId,
+      type: _.in(['expense', 'exchange']),
+      voided: _.neq(true)
+    }, event.startDate, event.endDate)
+    const expenses = await db.collection('coin_transactions')
+      .where(expenseQuery)
+      .orderBy('date', 'desc')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get()
+    data.expenses = expenses.data
+  }
+
+  if (event.includeDateExpenses) {
+    const expenses = await db.collection('coin_transactions')
+      .where({
+        ownerOpenid: openid,
+        childId,
+        date,
+        type: _.in(['expense', 'exchange']),
+        voided: _.neq(true)
+      })
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get()
+    data.dateExpenses = expenses.data
+  }
+
+  if (event.includeDateExpensesLegacy) {
+    const expenses = await db.collection('coin_transactions')
+      .where({ ownerOpenid: openid, childId, voided: _.neq(true) })
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get()
+    data.dateExpenses = expenses.data.filter((item) => ['expense', 'exchange'].includes(item.type) && item.date === date)
+  }
+
+  if (event.includeWishes) {
     const wishes = await db.collection('wish_items')
       .where({ ownerOpenid: openid, childId })
       .orderBy('createdAt', 'desc')
       .get()
     data.wishes = wishes.data
+  }
+
+  if (event.includeExchangeItems) {
+    try {
+      const exchange = await db.collection('exchange_items')
+        .where({ ownerOpenid: openid, childId, enabled: _.neq(false) })
+        .orderBy('createdAt', 'desc')
+        .get()
+      data.exchangeItems = exchange.data.length ? exchange.data : DEFAULT_EXCHANGE_ITEMS
+    } catch (error) {
+      if (!isCollectionMissing(error)) throw error
+      data.exchangeItems = DEFAULT_EXCHANGE_ITEMS
+    }
   }
 
   return ok(data)

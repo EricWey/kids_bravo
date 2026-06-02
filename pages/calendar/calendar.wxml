@@ -6,19 +6,27 @@
 
   <view class="mode-switch">
     <view class="mode-indicator {{mode === 'month' ? 'right' : 'left'}}"></view>
-    <button class="{{mode === 'week' ? 'active' : ''}}" data-mode="week" bindtap="switchMode">周视图</button>
-    <button class="{{mode === 'month' ? 'active' : ''}}" data-mode="month" bindtap="switchMode">月视图</button>
+    <button class="mode-button {{mode === 'week' ? 'active' : ''}}" data-mode="week" bindtap="switchMode">周视图</button>
+    <button class="mode-button {{mode === 'month' ? 'active' : ''}}" data-mode="month" bindtap="switchMode">月视图</button>
   </view>
 
   <view class="weekday-row">
-    <view wx:for="{{weekdays}}" wx:key="*this">{{item}}</view>
+    <view wx:for="{{weekdays}}" wx:key="*this" class="weekday-label">{{item}}</view>
   </view>
 
-  <view class="calendar-grid {{mode}}">
-    <view wx:for="{{days}}" wx:key="date" class="day-cell {{item.isToday ? 'today' : ''}} {{item.date === selectedDate ? 'selected' : ''}} {{item.isFuture ? 'future' : ''}}" data-date="{{item.date}}" bindtap="selectDay">
-      <view class="day-number">{{item.day}}</view>
-      <view wx:if="{{!item.isFuture}}" class="{{item.total >= 0 ? 'coin-plus' : 'coin-minus'}}">{{item.total >= 0 ? '+' : ''}}{{item.total}}</view>
-      <view wx:else class="coin-placeholder"></view>
+  <view class="calendar-panel {{mode}}" bindtouchstart="onCalendarTouchStart" bindtouchmove="onCalendarTouchMove" bindtouchend="onCalendarTouchEnd">
+    <view class="calendar-track" style="transform: translateX(calc(-33.3333% + {{dragOffset}}px)); transition: {{trackTransition}};">
+      <view wx:for="{{panels}}" wx:key="key" class="calendar-page">
+        <view wx:if="{{mode === 'month'}}" class="month-watermark">{{item.watermarkMonth}}</view>
+        <view class="calendar-grid {{mode}}">
+          <view wx:for="{{item.days}}" wx:key="date" wx:for-item="day" class="day-cell {{day.isToday ? 'today' : ''}} {{day.date === selectedDate ? 'selected' : ''}} {{day.isFuture ? 'future' : ''}}" data-date="{{day.date}}" bindtap="selectDay">
+            <view class="day-number">{{day.day}}</view>
+            <view wx:if="{{!day.isFuture}}" class="{{day.total >= 0 ? 'coin-plus' : 'coin-minus'}}">{{day.total >= 0 ? '+' : ''}}{{day.total}}</view>
+            <view wx:else class="coin-placeholder"></view>
+            <view wx:if="{{day.expenseCount}}" class="expense-dot">消费</view>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 
@@ -33,4 +41,16 @@
     </view>
   </view>
   <view wx:else class="card empty">这一天还没有打卡记录。</view>
+
+  <view class="section-title">{{selectedDate}} 消费</view>
+  <view wx:if="{{selectedExpenses.length}}" class="detail-list">
+    <view wx:for="{{selectedExpenses}}" wx:key="_id" class="card detail-card expense-card">
+      <view>
+        <view class="task-name">{{item.itemName || item.reason}}</view>
+        <view class="muted">金币账本支出</view>
+      </view>
+      <view class="coin-minus">{{item.amount}}</view>
+    </view>
+  </view>
+  <view wx:else class="card empty">这一天没有消费记录。</view>
 </view>
