@@ -1,0 +1,29 @@
+.pin-panel,
+.edit-area {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin-top: 24rpx;
+}
+
+.add-button,
+.save-button {
+  margin-top: 8rpx;
+}
+
+.edit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.picker-field {
+  display: flex;
+  align-items: center;
+}
+
+.small {
+  min-width: 150rpx;
+  min-height: 66rpx;
+  font-size: 24rpx;
+}

@@ -1,0 +1,236 @@
+.action-row {
+  margin: 24rpx 0 8rpx;
+}
+
+.action-button {
+  flex: 1;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.task-card {
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  transition: transform 180ms ease, border-color 180ms ease, filter 220ms ease, opacity 220ms ease;
+}
+
+.task-card.done {
+  border-color: #87dfa7;
+}
+
+.task-card.missed {
+  border-color: #ffb0a8;
+}
+
+.task-card.checked {
+  opacity: 0.86;
+}
+
+.task-card.checked .task-content {
+  filter: grayscale(1);
+  opacity: 0.66;
+}
+
+.task-content {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 18rpx;
+  transition: filter 220ms ease, opacity 220ms ease;
+}
+
+.reset-button {
+  display: flex;
+  position: absolute;
+  top: 18rpx;
+  right: 18rpx;
+  z-index: 2;
+  min-width: 60rpx;
+  min-height: 54rpx;
+  align-items: center;
+  justify-content: center;
+  border: 3rpx solid #fff7d6;
+  border-radius: 999rpx;
+  color: #5a3a10;
+  font-size: 24rpx;
+  font-weight: 900;
+  background: #ffcf5a;
+  box-shadow: 0 8rpx 20rpx rgba(89, 58, 16, 0.16);
+  animation: resetPop 220ms ease both;
+}
+
+.reset-button:active {
+  transform: scale(0.94);
+}
+
+.task-main {
+  width: 100%;
+  min-width: 0;
+}
+
+.task-name {
+  font-size: 31rpx;
+  font-weight: 900;
+}
+
+.task-desc {
+  margin-top: 8rpx;
+  color: #7e6c5c;
+  font-size: 25rpx;
+  line-height: 1.4;
+}
+
+.coin-line {
+  display: flex;
+  gap: 52rpx;
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.task-actions {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 40rpx;
+  align-items: stretch;
+}
+
+.done-button,
+.miss-button {
+  display: flex;
+  width: 180rpx;
+
+  min-height: 65rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12rpx;
+  border-radius: 22rpx;
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8rpx 18rpx rgba(60, 39, 12, 0.08);
+  transition: transform 120ms ease, filter 120ms ease;
+}
+
+.done-button:active,
+.miss-button:active {
+  transform: scale(0.96);
+  filter: brightness(0.98);
+}
+
+.done-button.disabled,
+.miss-button.disabled {
+  opacity: 0.65;
+  box-shadow: none;
+}
+
+.done-button {
+  color: #292302;
+  background: linear-gradient(135deg, #f0c61f, #ebe17d);
+}
+
+.miss-button {
+  color: #191818;
+  background: linear-gradient(135deg, #18b6e2, #9ee5ec);
+}
+
+.celebration-layer,
+.encourage-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  pointer-events: none;
+}
+
+.confetti {
+  position: absolute;
+  bottom: -36rpx;
+  width: 18rpx;
+  height: 30rpx;
+  border-radius: 6rpx;
+  background: #ffcf5a;
+  animation: confettiUp 1500ms ease-out both;
+}
+
+.piece-0 { left: 12%; background: #ff6b6b; animation-delay: 0ms; }
+.piece-1 { left: 18%; background: #45c4b0; animation-delay: 80ms; }
+.piece-2 { left: 25%; background: #ffcf5a; animation-delay: 140ms; }
+.piece-3 { left: 33%; background: #53a7ff; animation-delay: 20ms; }
+.piece-4 { left: 42%; background: #ff8a3d; animation-delay: 100ms; }
+.piece-5 { left: 50%; background: #72dc7a; animation-delay: 40ms; }
+.piece-6 { left: 58%; background: #ff6bcb; animation-delay: 120ms; }
+.piece-7 { left: 67%; background: #45c4b0; animation-delay: 70ms; }
+.piece-8 { left: 76%; background: #ffcf5a; animation-delay: 150ms; }
+.piece-9 { left: 86%; background: #53a7ff; animation-delay: 30ms; }
+
+@keyframes confettiUp {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg) scale(0.8);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-78vh) rotate(540deg) scale(1.1);
+  }
+}
+
+.encourage-layer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 32rpx 210rpx;
+}
+
+.encourage-bubble {
+  max-width: 620rpx;
+  padding: 24rpx 30rpx;
+  border-radius: 999rpx;
+  color: #7a3b10;
+  font-size: 30rpx;
+  font-weight: 900;
+  text-align: center;
+  background: #fff0bd;
+  box-shadow: 0 14rpx 34rpx rgba(94, 62, 20, 0.14);
+  animation: encourageFloat 1500ms ease both;
+}
+
+@keyframes encourageFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(80rpx) scale(0.92);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(-18rpx) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-38rpx) scale(0.98);
+  }
+}
+
+@keyframes resetPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-12rpx) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

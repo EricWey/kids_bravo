@@ -1,0 +1,34 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">任务模板</view>
+    <view class="hero-subtitle">按年龄和性别推荐，也可以预览后应用到当前档案。</view>
+  </view>
+
+  <view class="filters card">
+    <picker mode="selector" range="{{ages}}" value="{{ageIndex}}" bindchange="onAgeChange">
+      <view class="field picker-field">年龄：{{age}} 岁</view>
+    </picker>
+    <view class="gender-switch">
+      <view class="gender-indicator {{gender === 'girl' ? 'right' : 'left'}}"></view>
+      <button class="{{gender === 'boy' ? 'active' : ''}}" data-gender="boy" bindtap="chooseGender">男孩</button>
+      <button class="{{gender === 'girl' ? 'active' : ''}}" data-gender="girl" bindtap="chooseGender">女孩</button>
+    </view>
+  </view>
+
+  <view wx:for="{{templates}}" wx:key="_id" class="card template-card">
+    <view class="row">
+      <view>
+        <view class="template-title">{{item.name}}</view>
+        <view class="muted">{{item.age}} 岁 · {{item.genderText}}</view>
+      </view>
+      <button class="primary-button small" data-id="{{item._id}}" bindtap="applyTemplate">应用</button>
+    </view>
+    <view wx:for="{{item.categories}}" wx:key="name" wx:for-item="category" class="category-block">
+      <view class="category-title">{{category.name}}</view>
+      <view wx:for="{{category.tasks}}" wx:key="name" wx:for-item="task" class="task-preview">
+        <text>{{task.name}}</text>
+        <text class="muted">+{{task.rewardCoins}} / -{{task.penaltyCoins}}</text>
+      </view>
+    </view>
+  </view>
+</view>

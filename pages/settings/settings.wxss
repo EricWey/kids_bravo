@@ -1,0 +1,14 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  color: #6f604e;
+  font-size: 27rpx;
+  line-height: 1.5;
+}

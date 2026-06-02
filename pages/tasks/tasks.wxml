@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">任务管理</view>
+    <view class="hero-subtitle">编辑事项前需要家长 PIN，奖励和惩罚金币可以不同。</view>
+  </view>
+
+  <view wx:if="{{!unlocked}}" class="card pin-panel">
+    <input class="field" password maxlength="4" type="number" placeholder="输入 4 位家长 PIN" value="{{pin}}" bindinput="onPinInput" />
+    <button class="primary-button" bindtap="unlock">解锁编辑</button>
+    <button class="secondary-button" bindtap="goSettings">设置或修改 PIN</button>
+  </view>
+
+  <view wx:if="{{unlocked}}" class="edit-area">
+    <button class="primary-button add-button" bindtap="addTask">添加新事项</button>
+    <view wx:for="{{tasks}}" wx:key="_id" class="card edit-card">
+      <picker mode="selector" range="{{categoryNames}}" value="{{item.categoryIndex}}" data-index="{{index}}" bindchange="onCategoryChange">
+        <view class="field picker-field">{{item.category}}</view>
+      </picker>
+      <input class="field" placeholder="事项名称" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onInput" />
+      <textarea class="field textarea" placeholder="事项描述" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="onInput"></textarea>
+      <view class="grid-two">
+        <input class="field" type="number" placeholder="奖励金币" value="{{item.rewardCoins}}" data-index="{{index}}" data-field="rewardCoins" bindinput="onInput" />
+        <input class="field" type="number" placeholder="惩罚金币" value="{{item.penaltyCoins}}" data-index="{{index}}" data-field="penaltyCoins" bindinput="onInput" />
+      </view>
+      <view class="row">
+        <switch checked="{{item.enabled}}" data-index="{{index}}" bindchange="onEnabledChange" />
+        <button class="danger-button small" data-index="{{index}}" bindtap="removeTask">删除</button>
+      </view>
+    </view>
+    <button class="primary-button save-button" loading="{{saving}}" bindtap="save">保存任务</button>
+  </view>
+</view>

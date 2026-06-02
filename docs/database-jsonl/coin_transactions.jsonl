@@ -1,0 +1,3 @@
+{"_id":"coin_tx_demo_001","ownerOpenid":"OPENID_PLACEHOLDER","childId":"child_demo_001","taskId":"task_demo_001","taskName":"专注阅读 15 分钟","date":"2026-06-01","amount":6,"reason":"完成任务","type":"done","createdAt":"2026-06-01T10:00:00.000Z"}
+{"_id":"coin_tx_demo_002","ownerOpenid":"OPENID_PLACEHOLDER","childId":"child_demo_001","taskId":"task_demo_002","taskName":"按时刷牙洗脸","date":"2026-06-01","amount":-2,"reason":"未完成任务","type":"missed","createdAt":"2026-06-01T10:05:00.000Z"}
+{"_id":"coin_tx_demo_003","ownerOpenid":"OPENID_PLACEHOLDER","childId":"child_demo_001","wishId":"wish_demo_001","date":"2026-06-01","amount":-30,"reason":"兑换愿望：周末去公园","type":"wish","createdAt":"2026-06-01T18:00:00.000Z"}

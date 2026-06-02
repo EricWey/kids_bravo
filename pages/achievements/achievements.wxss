@@ -1,0 +1,57 @@
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.badge {
+  min-height: 210rpx;
+  text-align: center;
+  opacity: 0.58;
+}
+
+.badge.unlocked {
+  border-color: #84dfa3;
+  opacity: 1;
+}
+
+.badge-icon {
+  font-size: 48rpx;
+}
+
+.badge-name {
+  margin: 12rpx 0 8rpx;
+  font-size: 29rpx;
+  font-weight: 900;
+}
+
+.wish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.wish-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.wish-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.wish-name {
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.small {
+  min-width: 140rpx;
+  min-height: 66rpx;
+  font-size: 24rpx;
+}

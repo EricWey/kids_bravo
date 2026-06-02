@@ -1,0 +1,26 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">金币账本</view>
+    <view class="hero-subtitle">累计 {{totalCoins}} 金币 · 连续 {{streakDays}} 天</view>
+  </view>
+
+  <view class="section-title">成长轨迹</view>
+  <view class="card chart">
+    <view wx:for="{{trend}}" wx:key="date" class="bar-wrap">
+      <view class="bar {{item.total >= 0 ? 'positive' : 'negative'}}" style="height: {{item.height}}rpx;"></view>
+      <text>{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="section-title">金币流水</view>
+  <view wx:if="{{transactions.length}}" class="tx-list">
+    <view wx:for="{{transactions}}" wx:key="_id" class="card tx-card">
+      <view>
+        <view class="tx-title">{{item.taskName || item.reason}}</view>
+        <view class="muted">{{item.date}} · {{item.typeText}}</view>
+      </view>
+      <view class="{{item.amount >= 0 ? 'coin-plus' : 'coin-minus'}}">{{item.amount >= 0 ? '+' : ''}}{{item.amount}}</view>
+    </view>
+  </view>
+  <view wx:else class="card empty">还没有金币流水。</view>
+</view>

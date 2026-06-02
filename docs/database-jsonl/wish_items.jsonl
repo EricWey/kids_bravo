@@ -1,0 +1,2 @@
+{"_id":"wish_demo_001","ownerOpenid":"OPENID_PLACEHOLDER","childId":"child_demo_001","name":"周末去公园","costCoins":30,"status":"open","createdAt":"2026-06-01T09:00:00.000Z","updatedAt":"2026-06-01T09:00:00.000Z"}
+{"_id":"wish_demo_002","ownerOpenid":"OPENID_PLACEHOLDER","childId":"child_demo_001","name":"买一本故事书","costCoins":50,"status":"redeemed","redeemedAt":"2026-06-01T18:00:00.000Z","createdAt":"2026-06-01T09:30:00.000Z","updatedAt":"2026-06-01T18:00:00.000Z"}

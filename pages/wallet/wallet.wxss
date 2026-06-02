@@ -1,0 +1,52 @@
+.chart {
+  display: flex;
+  height: 260rpx;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 12rpx;
+}
+
+.bar-wrap {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  color: #8d7a64;
+  font-size: 22rpx;
+}
+
+.bar {
+  width: 100%;
+  min-height: 12rpx;
+  max-width: 48rpx;
+  border-radius: 999rpx 999rpx 10rpx 10rpx;
+}
+
+.positive {
+  background: #3cc486;
+}
+
+.negative {
+  background: #ff7373;
+}
+
+.tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.tx-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.tx-title {
+  margin-bottom: 8rpx;
+  font-size: 28rpx;
+}

@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-title">今日打卡</view>
+    <view class="hero-subtitle">{{childName || '选择档案后开始'}} · {{today}} · 今日 {{dailyTotal >= 0 ? '+' : ''}}{{dailyTotal}} 金币</view>
+  </view>
+
+  <view class="row action-row">
+    <button class="secondary-button action-button" bindtap="goTasks">管理任务</button>
+    <button class="secondary-button action-button" bindtap="loadToday">刷新</button>
+  </view>
+
+  <view wx:if="{{!activeChildId}}" class="card empty">请先到“档案”选择或创建小朋友档案。</view>
+
+  <block wx:for="{{categories}}" wx:key="name">
+    <view class="section-title">{{item.name}}</view>
+    <view class="task-list">
+      <view wx:for="{{item.tasks}}" wx:key="_id" wx:for-item="task" class="card task-card {{task.status ? 'checked' : ''}} {{task.status}}">
+        <button wx:if="{{task.status}}" class="reset-button" data-id="{{task._id}}" data-status="reset" bindtap="resetTask">重置</button>
+        <view class="task-content">
+          <view class="task-main">
+            <view class="task-name">{{task.name}}</view>
+            <view class="task-desc">{{task.description}}</view>
+            <view class="coin-line">
+              <text class="coin-plus">完成 +{{task.rewardCoins}}</text>
+              <text class="coin-minus">未完成 -{{task.penaltyCoins}}</text>
+            </view>
+          </view>
+          <view class="task-actions">
+            <button class="done-button {{task.status ? 'disabled' : ''}}" disabled="{{!!task.status}}" data-id="{{task._id}}" data-status="done" bindtap="submit">完成</button>
+            <button class="miss-button {{task.status ? 'disabled' : ''}}" disabled="{{!!task.status}}" data-id="{{task._id}}" data-status="missed" bindtap="submit">未完成</button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{celebrationVisible}}" class="celebration-layer">
+    <view wx:for="{{confetti}}" wx:key="id" class="confetti piece-{{index}}"></view>
+  </view>
+
+  <view wx:if="{{encourageVisible}}" class="encourage-layer">
+    <view class="encourage-bubble">😊 继续加油，明天一定完成</view>
+  </view>
+</view>

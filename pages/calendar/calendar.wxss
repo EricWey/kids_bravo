@@ -1,0 +1,137 @@
+.mode-switch {
+  display: flex;
+  position: relative;
+  margin: 24rpx 0;
+  padding: 8rpx;
+  border-radius: 999rpx;
+  background: #fff6d8;
+}
+
+.mode-switch button {
+  display: flex;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 70rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: #7c6b55;
+  font-size: 27rpx;
+  font-weight: 900;
+  line-height: 1;
+  transition: color 240ms ease;
+}
+
+.mode-switch button::after {
+  border: 0;
+}
+
+.mode-switch .active {
+  color: #453010;
+}
+
+.mode-indicator {
+  position: absolute;
+  top: 8rpx;
+  bottom: 8rpx;
+  left: 8rpx;
+  width: calc((100% - 16rpx) / 2);
+  border-radius: 999rpx;
+  background: #ffca54;
+  box-shadow: 0 8rpx 18rpx rgba(255, 162, 61, 0.18);
+  transition: transform 240ms ease;
+}
+
+.mode-indicator.right {
+  transform: translateX(100%);
+}
+
+.weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.weekday-row view {
+  min-height: 48rpx;
+  color: #5d5144;
+  font-size: 24rpx;
+  font-weight: 900;
+  line-height: 48rpx;
+  text-align: center;
+}
+
+.calendar-grid {
+  display: grid;
+  gap: 12rpx;
+}
+
+.calendar-grid.week {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-grid.month {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.day-cell {
+  display: flex;
+  min-height: 104rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3rpx solid #fff0bf;
+  border-radius: 18rpx;
+  background: rgba(255, 255, 255, 0.92);
+  font-weight: 900;
+}
+
+.day-cell.future {
+  color: #b8ab97;
+  background: rgba(255, 255, 255, 0.58);
+  border-color: #f2ead8;
+}
+
+.day-cell.today {
+  border-color: #ff8a3d;
+  background: #fff0bd;
+  box-shadow: 0 0 0 4rpx rgba(255, 138, 61, 0.12);
+}
+
+.day-cell.selected {
+  border-color: #45c4b0;
+}
+
+.day-cell.today .day-number {
+  color: #be4d16;
+  font-weight: 1000;
+}
+
+.day-number {
+  margin-bottom: 8rpx;
+  font-size: 25rpx;
+}
+
+.coin-placeholder {
+  width: 44rpx;
+  height: 28rpx;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.detail-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.task-name {
+  font-size: 29rpx;
+  font-weight: 900;
+}

@@ -1,0 +1,51 @@
+{
+  "pages": [
+    "pages/profile/profile",
+    "pages/today/today",
+    "pages/calendar/calendar",
+    "pages/wallet/wallet",
+    "pages/achievements/achievements",
+    "pages/tasks/tasks",
+    "pages/templates/templates",
+    "pages/settings/settings"
+  ],
+  "window": {
+    "navigationBarTitleText": "Bravo 星球",
+    "navigationBarBackgroundColor": "#ffcf5a",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fff8df",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#7a6b57",
+    "selectedColor": "#ff8a3d",
+    "backgroundColor": "#fffdf5",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "档案"
+      },
+      {
+        "pagePath": "pages/today/today",
+        "text": "打卡"
+      },
+      {
+        "pagePath": "pages/calendar/calendar",
+        "text": "日历"
+      },
+      {
+        "pagePath": "pages/wallet/wallet",
+        "text": "金币"
+      },
+      {
+        "pagePath": "pages/achievements/achievements",
+        "text": "成就"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

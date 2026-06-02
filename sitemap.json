@@ -1,0 +1,9 @@
+{
+  "desc": "All pages are available for indexing unless blocked by WeChat settings.",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}
