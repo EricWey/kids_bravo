@@ -69,6 +69,8 @@ Page({
     wishForm: { wishId: '', name: '', costCoins: '', imageFileId: '', imageTempPath: '', themeIcon: '' },
     editingWishForm: { wishId: '', name: '', costCoins: '', imageFileId: '', imageTempPath: '', themeIcon: '' },
     editingWishVisible: false,
+    wishImagePreviewVisible: false,
+    wishImagePreviewUrl: '',
     wishActionMenuVisible: false,
     activeWishId: '',
     activeWishName: '',
@@ -204,6 +206,8 @@ Page({
       ...item,
       costCoins: cost,
       themeIcon: item.themeIcon || this.pickWishThemeIcon(item.name || item._id || ''),
+      displayImage: item.imageFileId || item.themeIcon || this.pickWishThemeIcon(item.name || item._id || ''),
+      hasCustomImage: Boolean(item.imageFileId),
       percent,
       isComplete: percent >= 100,
       progressClass: `p${Math.min(100, Math.max(0, Math.round(percent / 10) * 10))}`,
@@ -790,26 +794,39 @@ Page({
   },
 
   chooseWishImage() {
-    this.chooseImage((path) => this.confirmSelectedImage(path, 'wishForm.imageTempPath'))
+    this.chooseImage((path) => this.confirmSelectedImage(path, 'wishForm.imageTempPath'), '愿望图片')
   },
 
   chooseEditingWishImage() {
-    this.chooseImage((path) => this.confirmSelectedImage(path, 'editingWishForm.imageTempPath'))
+    this.chooseImage((path) => this.confirmSelectedImage(path, 'editingWishForm.imageTempPath'), '愿望图片')
   },
 
   chooseExpensePhoto() {
-    this.chooseImage((path) => this.confirmSelectedImage(path, 'expenseForm.photoTempPath'))
+    this.chooseImage((path) => this.confirmSelectedImage(path, 'expenseForm.photoTempPath'), '消费照片')
   },
 
-  chooseImage(done) {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
-      success: (res) => {
-        const file = res.tempFiles[0]
-        if (file && file.tempFilePath) done(file.tempFilePath)
+  chooseImage(done, label = '图片') {
+    wx.showActionSheet({
+      itemList: ['拍摄照片', '从相册选择'],
+      success: (action) => {
+        const sourceType = action.tapIndex === 0 ? ['camera'] : ['album']
+        wx.showLoading({ title: '选择图片中' })
+        wx.chooseMedia({
+          count: 1,
+          mediaType: ['image'],
+          sourceType,
+          sizeType: ['compressed'],
+          success: (res) => {
+            const file = res.tempFiles[0]
+            if (file && file.tempFilePath) done(file.tempFilePath)
+          },
+          fail: (error) => {
+            if (!String(error.errMsg || '').includes('cancel')) {
+              showError(error, `${label}选择失败`)
+            }
+          },
+          complete: () => wx.hideLoading()
+        })
       }
     })
   },
@@ -834,7 +851,11 @@ Page({
 
   uploadImage(filePath, folder, quality) {
     return new Promise((resolve, reject) => {
-      wx.showLoading({ title: '图片处理中' })
+      wx.showLoading({ title: '图片处理中', mask: true })
+      const failUpload = (error) => {
+        wx.hideLoading()
+        reject(error)
+      }
       wx.getImageInfo({
         src: filePath,
         success: (info) => {
@@ -855,7 +876,7 @@ Page({
               fileType: 'jpg',
               quality,
               success: (res) => {
-                wx.showLoading({ title: '上传中' })
+                wx.showLoading({ title: '上传中', mask: true })
                 wx.cloud.uploadFile({
                   cloudPath: `${folder}/${app.globalData.activeChildId}_${Date.now()}.jpg`,
                   filePath: res.tempFilePath,
@@ -864,11 +885,11 @@ Page({
                   complete: () => wx.hideLoading()
                 })
               },
-              fail: reject
+              fail: failUpload
             }, this)
           })
         },
-        fail: reject
+        fail: failUpload
       })
     })
   },
@@ -876,5 +897,21 @@ Page({
   previewImage(event) {
     const url = event.currentTarget.dataset.url
     if (url) wx.previewImage({ urls: [url], current: url })
+  },
+
+  openWishImagePreview(event) {
+    const url = event.currentTarget.dataset.url
+    if (!url) return
+    this.setData({
+      wishImagePreviewVisible: true,
+      wishImagePreviewUrl: url
+    })
+  },
+
+  closeWishImagePreview() {
+    this.setData({
+      wishImagePreviewVisible: false,
+      wishImagePreviewUrl: ''
+    })
   }
 })

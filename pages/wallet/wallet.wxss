@@ -186,6 +186,13 @@
   font-weight: 800;
 }
 
+.image-helper-text {
+  margin-top: -8rpx;
+  color: #7a6956;
+  font-size: 23rpx;
+  font-weight: 800;
+}
+
 .wish-photo-icon {
   display: flex;
   overflow: hidden;
@@ -310,24 +317,40 @@
   content: '完成';
 }
 
-.wish-theme-image {
+.wish-image-wrap {
+  position: relative;
   width: 112rpx;
   height: 112rpx;
   flex: 0 0 112rpx;
+}
+
+.wish-theme-image {
+  width: 112rpx;
+  height: 112rpx;
   border-radius: 24rpx;
   background: #f3efe5;
   box-shadow: 0 8rpx 18rpx rgba(95, 72, 38, 0.1);
 }
 
-.wish-photo-chip {
-  position: absolute;
-  left: 92rpx;
-  top: 92rpx;
-  width: 46rpx;
-  height: 46rpx;
+.wish-image-wrap.custom .wish-theme-image {
   border: 4rpx solid #ffffff;
-  border-radius: 50%;
-  background: #fff7df;
+  box-shadow: 0 10rpx 24rpx rgba(95, 72, 38, 0.16);
+}
+
+.wish-photo-label {
+  position: absolute;
+  right: -8rpx;
+  bottom: -8rpx;
+  min-height: 34rpx;
+  padding: 0 10rpx;
+  border: 3rpx solid #ffffff;
+  border-radius: 999rpx;
+  color: #5f3c0c;
+  background: #ffe192;
+  box-shadow: 0 6rpx 14rpx rgba(95, 72, 38, 0.14);
+  font-size: 18rpx;
+  font-weight: 1000;
+  line-height: 34rpx;
 }
 
 .wish-content {
@@ -535,7 +558,7 @@
 }
 
 .wish-action-actions {
-  display: flex;
+  display: grid;
   width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14rpx;
@@ -549,6 +572,53 @@
   font-size: 26rpx;
   line-height: 1;
   white-space: nowrap;
+}
+
+.image-preview-backdrop {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  align-items: center;
+  justify-content: center;
+  padding: 34rpx;
+  background: rgba(34, 28, 22, 0.72);
+}
+
+.image-preview-panel {
+  display: flex;
+  width: 100%;
+  max-width: 690rpx;
+  max-height: 86vh;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+  padding: 22rpx;
+  border-radius: 26rpx;
+  background: #ffffff;
+  box-shadow: 0 20rpx 58rpx rgba(0, 0, 0, 0.24);
+  animation: modalIn 180ms ease both;
+}
+
+.image-preview-large {
+  width: 100%;
+  height: 68vh;
+  max-height: 920rpx;
+  border-radius: 20rpx;
+  background: #f3efe5;
+}
+
+.image-preview-close {
+  display: flex;
+  width: 220rpx;
+  min-height: 72rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: #3b2b16;
+  background: linear-gradient(135deg, #ffe66d, #ff9f43);
+  font-size: 26rpx;
+  font-weight: 900;
 }
 
 .modal-backdrop {

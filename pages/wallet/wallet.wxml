@@ -26,8 +26,10 @@
     <view class="section-title">愿望清单</view>
     <view wx:if="{{wishes.length}}" class="wish-list">
       <view wx:for="{{wishes}}" wx:key="_id" wx:for-index="wishIndex" class="wish-card {{item.status === 'redeemed' ? 'done' : ''}} {{item.isComplete ? 'complete' : ''}}" data-id="{{item._id}}" data-index="{{wishIndex}}" bindtouchstart="onWishTouchStart" bindtouchend="onWishTouchEnd" bindtouchcancel="onWishTouchEnd">
-        <image class="wish-theme-image" src="{{item.themeIcon}}" mode="aspectFill"></image>
-        <image wx:if="{{item.imageFileId}}" class="wish-photo-chip" src="{{item.imageFileId}}" mode="aspectFill" data-url="{{item.imageFileId}}" catchtap="previewImage"></image>
+        <view class="wish-image-wrap {{item.hasCustomImage ? 'custom' : ''}}" data-url="{{item.displayImage}}" catchtap="openWishImagePreview">
+          <image class="wish-theme-image" src="{{item.displayImage}}" mode="aspectFill"></image>
+          <view wx:if="{{item.hasCustomImage}}" class="wish-photo-label">照片</view>
+        </view>
         <view class="wish-content">
           <view class="wish-name">{{item.name}}</view>
           <view class="coin-pill">{{item.costCoins}} 金币</view>
@@ -46,7 +48,7 @@
       <input class="field" placeholder="愿望名称，例如：滑板车" value="{{wishForm.name}}" data-field="name" bindinput="onWishInput" />
       <view class="coin-input-row">
         <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{wishForm.costCoins}}" data-field="costCoins" bindinput="onWishInput" />
-        <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage" aria-label="上传愿望照片">
+        <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage" aria-label="添加图片">
           <image wx:if="{{wishForm.imageTempPath || wishForm.imageFileId}}" class="wish-photo-thumb" src="{{wishForm.imageTempPath || wishForm.imageFileId}}" mode="aspectFill"></image>
           <view wx:else class="camera-glyph">
             <view class="camera-top"></view>
@@ -56,6 +58,7 @@
           </view>
         </button>
       </view>
+      <view class="image-helper-text">{{wishForm.imageTempPath || wishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
       <view class="form-actions">
         <button class="secondary-button" wx:if="{{wishForm.wishId}}" bindtap="resetWishForm">取消编辑</button>
         <button class="primary-button" loading="{{savingWish}}" bindtap="saveWish">{{wishForm.wishId ? '保存愿望' : '加入清单'}}</button>
@@ -80,7 +83,7 @@
         <input class="field" placeholder="愿望名称" value="{{editingWishForm.name}}" data-field="name" bindinput="onEditingWishInput" />
         <view class="coin-input-row">
           <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{editingWishForm.costCoins}}" data-field="costCoins" bindinput="onEditingWishInput" />
-          <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage" aria-label="上传愿望照片">
+          <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage" aria-label="添加图片">
             <image wx:if="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" class="wish-photo-thumb" src="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" mode="aspectFill"></image>
             <view wx:else class="camera-glyph">
               <view class="camera-top"></view>
@@ -90,11 +93,19 @@
             </view>
           </button>
         </view>
+        <view class="image-helper-text">{{editingWishForm.imageTempPath || editingWishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
         <view class="form-actions">
           <button class="secondary-button" bindtap="closeEditWishDialog">取消</button>
           <button class="primary-button" loading="{{savingWish}}" bindtap="saveEditingWish">保存</button>
         </view>
       </view>
+    </view>
+  </view>
+
+  <view wx:if="{{wishImagePreviewVisible}}" class="image-preview-backdrop" catchtap="closeWishImagePreview">
+    <view class="image-preview-panel" catchtap="noop">
+      <image class="image-preview-large" src="{{wishImagePreviewUrl}}" mode="aspectFit"></image>
+      <button class="image-preview-close" bindtap="closeWishImagePreview">关闭</button>
     </view>
   </view>
 
