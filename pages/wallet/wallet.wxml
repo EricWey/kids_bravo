@@ -1,10 +1,33 @@
-<view class="page wallet-page">
+<view class="page wallet-page" bindtap="dismissWalletSwipe">
   <view class="hero wallet-hero">
     <view>
       <view class="hero-title">金币小商店</view>
       <view class="hero-subtitle">现在有 {{totalCoins}} 金币 · 连续 {{streakDays}} 天闪闪发光</view>
     </view>
-    <view class="coin-badge {{coinSpinVisible ? 'coin-badge-pop' : ''}}">{{totalCoins}}</view>
+    <view class="coin-badge {{coinSpinVisible ? 'coin-badge-pop' : ''}} {{totalCoins < 0 ? 'negative' : ''}}">{{totalCoins}}</view>
+  </view>
+
+  <view class="section-title">本周金币轨迹</view>
+  <view class="trend-legend">
+    <view class="legend-item"><view class="legend-dot income"></view><text>收入</text></view>
+    <view class="legend-item"><view class="legend-dot expense"></view><text>消费</text></view>
+    <view class="legend-item"><view class="legend-pill">总</view><text>累计</text></view>
+  </view>
+  <view class="card chart">
+    <view wx:for="{{trend}}" wx:key="date" class="bar-wrap">
+      <view class="cumulative-label">{{item.cumulativeText}}</view>
+      <view class="bar-pair">
+        <view class="bar-slot">
+          <view wx:if="{{item.incomeText}}" class="bar-value income-value">{{item.incomeText}}</view>
+          <view wx:if="{{item.incomeHeight}}" class="bar income-bar {{item.incomeAmount >= 0 ? 'positive' : 'negative'}}" style="height: {{item.incomeHeight}}rpx;"></view>
+        </view>
+        <view class="bar-slot">
+          <view wx:if="{{item.expenseText}}" class="bar-value expense-value">{{item.expenseText}}</view>
+          <view wx:if="{{item.expenseHeight}}" class="bar expense-bar" style="height: {{item.expenseHeight}}rpx;"></view>
+        </view>
+      </view>
+      <text>{{item.label}}</text>
+    </view>
   </view>
 
   <view class="module-tabs">
@@ -12,14 +35,6 @@
     <button wx:for="{{modules}}" wx:key="key" class="module-tab {{activeModule === item.key ? 'active' : ''}}" data-module="{{item.key}}" bindtap="switchModule">
       <text class="module-tab-text">{{item.label}}</text>
     </button>
-  </view>
-
-  <view class="section-title">本周金币轨迹</view>
-  <view class="card chart">
-    <view wx:for="{{trend}}" wx:key="date" class="bar-wrap">
-      <view class="bar {{item.total >= 0 ? 'positive' : 'negative'}}" style="height: {{item.height}}rpx;"></view>
-      <text>{{item.label}}</text>
-    </view>
   </view>
 
   <view wx:if="{{activeModule === 'wishes'}}" class="module-panel">
@@ -133,26 +148,46 @@
     </view>
 
     <view class="filter-row">
-      <picker mode="date" value="{{ledgerStart}}" bindchange="onLedgerStartChange">
+      <picker mode="date" value="{{ledgerStart}}" end="{{ledgerPickerMax}}" bindchange="onLedgerStartChange">
         <view class="filter-chip">{{ledgerStart || '开始日期'}}</view>
       </picker>
-      <picker mode="date" value="{{ledgerEnd}}" bindchange="onLedgerEndChange">
+      <picker mode="date" value="{{ledgerEnd}}" end="{{ledgerPickerMax}}" bindchange="onLedgerEndChange">
         <view class="filter-chip">{{ledgerEnd || '结束日期'}}</view>
       </picker>
-      <button class="filter-clear" bindtap="clearLedgerFilter">清除</button>
+      <button class="filter-clear" loading="{{loadingLedger}}" bindtap="clearLedgerFilter">近7天</button>
     </view>
+    <view wx:if="{{loadingLedger}}" class="ledger-loading">正在更新账本...</view>
 
     <view wx:if="{{expenses.length}}" class="tx-list">
-      <view wx:for="{{expenses}}" wx:key="_id" class="card tx-card">
-        <image wx:if="{{item.photoFileId}}" class="tx-photo" src="{{item.photoFileId}}" mode="aspectFill" data-url="{{item.photoFileId}}" bindtap="previewImage"></image>
-        <view class="tx-main">
-          <view class="tx-title">{{item.itemName || item.reason}}</view>
-          <view class="muted">{{item.date}}</view>
+      <view wx:for="{{expenses}}" wx:key="_id" class="tx-swipe" data-id="{{item._id}}" bindtouchstart="onExpenseTouchStart" bindtouchmove="onExpenseTouchMove" bindtouchend="onExpenseTouchEnd" bindtouchcancel="onExpenseTouchEnd">
+        <view class="tx-delete-action" data-id="{{item._id}}" catchtap="openDeleteExpenseDialog">删除</view>
+        <view class="card tx-card tx-card-slidable" style="transform: translateX(-{{item.swipeOffset}}px);" data-id="{{item._id}}" catchtap="handleExpenseCardTap">
+          <image wx:if="{{item.photoFileId}}" class="tx-photo" src="{{item.photoFileId}}" mode="aspectFill" data-url="{{item.photoFileId}}" catchtap="previewImage"></image>
+          <view class="tx-main">
+            <view class="tx-title">{{item.itemName || item.reason}}</view>
+            <view class="muted">{{item.date}}</view>
+          </view>
+          <view class="coin-minus">{{item.amount}}</view>
         </view>
-        <view class="coin-minus">{{item.amount}}</view>
       </view>
     </view>
     <view wx:else class="card empty">这个时间段还没有消费记录。</view>
+
+    <view wx:if="{{deleteExpenseDialogVisible}}" class="modal-backdrop delete-expense-backdrop" catchtap="closeDeleteExpenseDialog">
+      <view class="edit-modal delete-expense-modal" catchtap="noop">
+        <view class="edit-title">家长验证</view>
+        <view class="delete-expense-tip">删除消费记录需要家长 PIN。</view>
+        <view class="pin-input-row">
+          <input wx:if="{{!deleteExpensePinVisible}}" class="field pin-field" password placeholder="输入家长 PIN" value="{{deleteExpensePin}}" bindinput="onDeleteExpensePinInput" />
+          <input wx:else class="field pin-field" placeholder="输入家长 PIN" value="{{deleteExpensePin}}" bindinput="onDeleteExpensePinInput" />
+          <button class="pin-toggle" bindtap="toggleDeleteExpensePinVisible">{{deleteExpensePinVisible ? '隐藏' : '显示'}}</button>
+        </view>
+        <view class="exchange-confirm-actions">
+          <button class="secondary-button exchange-confirm-button" bindtap="closeDeleteExpenseDialog">取消</button>
+          <button class="danger-button exchange-confirm-button" loading="{{deletingExpense}}" bindtap="confirmDeleteExpenseAuth">确认</button>
+        </view>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{activeModule === 'exchange'}}" class="module-panel">
@@ -166,11 +201,16 @@
             <view class="coin-pill">{{entry.costCoins}} 金币</view>
             <view class="exchange-desc">{{entry.description}}</view>
           </view>
-          <view class="mini-actions" wx:if="{{!entry.preset}}">
-            <button class="mini-button" data-id="{{entry._id}}" bindtap="editExchange">编辑</button>
-            <button class="mini-button danger" data-id="{{entry._id}}" bindtap="deleteExchange">下架</button>
+          <view class="mini-actions">
+            <button class="exchange-action-button edit {{entry.preset ? 'solo' : ''}}" data-id="{{entry._id}}" bindtap="editExchange">
+              <image class="exchange-action-icon" src="/assets/wish-icons/paint.png" mode="aspectFill"></image>
+              <text>编辑</text>
+            </button>
+            <button wx:if="{{!entry.preset}}" class="exchange-action-button danger" data-id="{{entry._id}}" bindtap="deleteExchange">
+              <image class="exchange-action-icon" src="/assets/wish-icons/gift.png" mode="aspectFill"></image>
+              <text>下架</text>
+            </button>
           </view>
-          <view wx:else class="preset-tag">示例</view>
         </view>
       </view>
     </view>
@@ -184,8 +224,39 @@
       </picker>
       <textarea class="field textarea" placeholder="简短描述" value="{{exchangeForm.description}}" data-field="description" bindinput="onExchangeInput"></textarea>
       <view class="form-actions">
-        <button class="secondary-button" wx:if="{{exchangeForm.itemId}}" bindtap="resetExchangeForm">取消编辑</button>
-        <button class="primary-button" loading="{{savingExchange}}" bindtap="saveExchangeItem">{{exchangeForm.itemId ? '保存兑换项' : '上架兑换项'}}</button>
+        <button class="primary-button" loading="{{savingExchange}}" bindtap="saveExchangeItem">上架兑换项</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{exchangeEditVisible}}" class="modal-backdrop exchange-edit-backdrop" catchtap="closeExchangeEditDialog">
+    <view class="edit-modal exchange-edit-modal" catchtap="noop">
+      <view class="edit-title">编辑兑换项</view>
+      <input class="field" placeholder="物品或体验名称" value="{{exchangeEditForm.name}}" data-field="name" bindinput="onExchangeEditInput" />
+      <input class="field" type="number" placeholder="所需金币" value="{{exchangeEditForm.costCoins}}" data-field="costCoins" bindinput="onExchangeEditInput" />
+      <picker value="{{exchangeEditCategoryIndex}}" range="{{exchangeCategories}}" bindchange="onExchangeEditCategoryChange">
+        <view class="field picker-field">分类：{{exchangeEditForm.category}}</view>
+      </picker>
+      <textarea class="field textarea" placeholder="简短描述" value="{{exchangeEditForm.description}}" data-field="description" bindinput="onExchangeEditInput"></textarea>
+      <view class="form-actions">
+        <button class="secondary-button" bindtap="closeExchangeEditDialog">取消</button>
+        <button class="primary-button" loading="{{savingExchange}}" bindtap="saveExchangeEditItem">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{exchangeEditAuthVisible}}" class="modal-backdrop delete-expense-backdrop" catchtap="closeExchangeEditAuth">
+    <view class="edit-modal delete-expense-modal" catchtap="noop">
+      <view class="edit-title">家长验证</view>
+      <view class="delete-expense-tip">编辑兑换物品需要家长 PIN。</view>
+      <view class="pin-input-row">
+        <input wx:if="{{!exchangeEditPinVisible}}" class="field pin-field" password placeholder="输入家长 PIN" value="{{exchangeEditPin}}" bindinput="onExchangeEditPinInput" />
+        <input wx:else class="field pin-field" placeholder="输入家长 PIN" value="{{exchangeEditPin}}" bindinput="onExchangeEditPinInput" />
+        <button class="pin-toggle" bindtap="toggleExchangeEditPinVisible">{{exchangeEditPinVisible ? '隐藏' : '显示'}}</button>
+      </view>
+      <view class="exchange-confirm-actions">
+        <button class="secondary-button exchange-confirm-button" bindtap="closeExchangeEditAuth">取消</button>
+        <button class="primary-button exchange-confirm-button" loading="{{verifyingExchangeEdit}}" bindtap="confirmExchangeEditAuth">确认</button>
       </view>
     </view>
   </view>

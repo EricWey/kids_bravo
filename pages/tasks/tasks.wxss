@@ -22,6 +22,16 @@
   align-items: center;
 }
 
+.status-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+}
+
+.task-status-control.inline {
+  justify-content: flex-start;
+}
+
 .small {
   min-width: 150rpx;
   min-height: 66rpx;

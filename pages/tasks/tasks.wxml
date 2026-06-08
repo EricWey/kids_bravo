@@ -23,7 +23,13 @@
         <input class="field" type="number" placeholder="惩罚金币" value="{{item.penaltyCoins}}" data-index="{{index}}" data-field="penaltyCoins" bindinput="onInput" />
       </view>
       <view class="row">
-        <switch checked="{{item.enabled}}" data-index="{{index}}" bindchange="onEnabledChange" />
+        <view class="status-switch-row">
+          <switch checked="{{item.enabled}}" data-index="{{index}}" bindchange="onEnabledChange" />
+          <view class="task-status-control inline {{item.enabled ? 'enabled' : 'disabled'}}">
+            <text class="task-status-dot"></text>
+            <text class="task-status-text">{{item.enabled ? '已启用' : '已停用'}}</text>
+          </view>
+        </view>
         <button class="danger-button small" data-index="{{index}}" bindtap="removeTask">删除</button>
       </view>
     </view>

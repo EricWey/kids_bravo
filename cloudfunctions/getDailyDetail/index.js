@@ -40,15 +40,36 @@ function applyDateRange(query, startDate, endDate) {
 }
 
 function groupTasks(tasks, taskStates = {}) {
-  return CATEGORIES.map((name) => ({
+  const grouped = CATEGORIES.map((name) => ({
     name,
     tasks: tasks
       .filter((task) => task.category === name)
       .map((task) => ({
         ...task,
-        status: taskStates[task._id] ? taskStates[task._id].status : ''
+        status: taskStates[task._id] ? taskStates[task._id].status : '',
+        amount: taskStates[task._id] ? taskStates[task._id].amount : undefined
       }))
   }))
+  Object.keys(taskStates).forEach((taskId) => {
+    if (tasks.some((task) => task._id === taskId)) return
+    const state = taskStates[taskId]
+    const categoryName = state.category || '学习成长类'
+    let group = grouped.find((item) => item.name === categoryName)
+    if (!group) {
+      group = grouped[0]
+    }
+    group.tasks.push({
+      _id: taskId,
+      name: state.taskName || '历史任务',
+      description: '该任务已被修改或删除，以下为历史打卡记录。',
+      rewardCoins: Number(state.amount || 0) > 0 ? Number(state.amount || 0) : 0,
+      penaltyCoins: Number(state.amount || 0) < 0 ? Math.abs(Number(state.amount || 0)) : 0,
+      enabled: false,
+      status: state.status,
+      amount: Number(state.amount || 0)
+    })
+  })
+  return grouped
 }
 
 function isCollectionMissing(error) {
@@ -56,6 +77,25 @@ function isCollectionMissing(error) {
   return message.includes('DATABASE_COLLECTION_NOT_EXIST') ||
     message.includes('collection not exists') ||
     message.includes('Db or Table not exist')
+}
+
+function mergeExchangeItems(customItems = []) {
+  const items = DEFAULT_EXCHANGE_ITEMS.map((item) => ({ ...item }))
+  const replacedPresetIds = new Set()
+  customItems.forEach((item) => {
+    const originalPresetId = item.originalPresetId || ''
+    if (originalPresetId) {
+      if (replacedPresetIds.has(originalPresetId)) return
+      const index = items.findIndex((preset) => preset._id === originalPresetId)
+      if (index >= 0) {
+        items[index] = { ...item, preset: false }
+        replacedPresetIds.add(originalPresetId)
+        return
+      }
+    }
+    items.push(item)
+  })
+  return items
 }
 
 exports.main = async (event = {}) => {
@@ -150,7 +190,7 @@ exports.main = async (event = {}) => {
         .where({ ownerOpenid: openid, childId, enabled: _.neq(false) })
         .orderBy('createdAt', 'desc')
         .get()
-      data.exchangeItems = exchange.data.length ? exchange.data : DEFAULT_EXCHANGE_ITEMS
+      data.exchangeItems = mergeExchangeItems(exchange.data)
     } catch (error) {
       if (!isCollectionMissing(error)) throw error
       data.exchangeItems = DEFAULT_EXCHANGE_ITEMS

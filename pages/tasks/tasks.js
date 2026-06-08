@@ -1,5 +1,6 @@
 const app = getApp()
 const { callCloud, showError, formatDate } = require('../../utils/cloud')
+const taskStatus = require('../../utils/taskStatus')
 
 const CATEGORIES = ['学习成长类', '生活习惯类', '行为品德类']
 
@@ -12,10 +13,28 @@ Page({
     saving: false
   },
 
+  onLoad() {
+    this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.handleTaskStatusChange(change))
+  },
+
+  onUnload() {
+    if (this.unsubscribeTaskStatus) {
+      this.unsubscribeTaskStatus()
+      this.unsubscribeTaskStatus = null
+    }
+  },
+
   onShow() {
     if (this.data.unlocked) {
       this.loadTasks()
     }
+  },
+
+  handleTaskStatusChange(change) {
+    if (!change || change.childId !== app.globalData.activeChildId) return
+    const index = this.data.tasks.findIndex((task) => task._id === change.taskId)
+    if (index < 0) return
+    this.setData({ [`tasks[${index}].enabled`]: change.enabled !== false })
   },
 
   onPinInput(event) {
@@ -60,7 +79,7 @@ Page({
         })
       })
     })
-    this.setData({ tasks })
+    this.setData({ tasks: taskStatus.applyTaskStatusList(tasks, app.globalData.activeChildId) })
   },
 
   addTask() {
@@ -122,6 +141,15 @@ Page({
         childId: app.globalData.activeChildId,
         pin: this.data.pin,
         tasks
+      })
+      tasks.forEach((task) => {
+        if (task._id) {
+          taskStatus.publishTaskStatus({
+            childId: app.globalData.activeChildId,
+            taskId: task._id,
+            enabled: task.enabled
+          })
+        }
       })
       this.setData({ saving: false })
       wx.showToast({ title: '任务已保存', icon: 'success' })

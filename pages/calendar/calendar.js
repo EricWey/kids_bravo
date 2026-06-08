@@ -66,12 +66,13 @@ Page({
       })))
       const today = formatDate()
       const panels = results.map((result, index) => ({
-        key: `${this.data.mode}_${formatDate(panelDates[index])}`,
+        key: `${this.data.mode}_${index}_${formatDate(panelDates[index])}`,
         watermarkMonth: panelDates[index].getMonth() + 1,
         days: (result.days || []).map((day) => ({
           ...day,
           isToday: day.date === today,
-          isFuture: day.date > today
+          isFuture: day.date > today,
+          coinClass: Number(day.total || 0) > 0 ? 'coin-plus' : Number(day.total || 0) < 0 ? 'coin-minus' : 'coin-zero'
         }))
       }))
       this.setData({
@@ -303,7 +304,7 @@ Page({
               ...task,
               category: category.name,
               statusText: task.status === 'done' ? '完成' : '未完成',
-              amount: task.status === 'done' ? task.rewardCoins : -task.penaltyCoins
+              amount: task.amount !== undefined ? Number(task.amount) : task.status === 'done' ? task.rewardCoins : -task.penaltyCoins
             })
           }
         })

@@ -49,6 +49,29 @@ const DEFAULT_EXCHANGE_ITEMS = [
     preset: true
   }
 ]
+const MAX_LEDGER_RANGE_DAYS = 30
+
+function shiftDate(date, offset) {
+  const target = new Date(`${date}T00:00:00`)
+  target.setDate(target.getDate() + offset)
+  return formatDate(target)
+}
+
+function daysBetween(start, end) {
+  const startTime = new Date(`${start}T00:00:00`).getTime()
+  const endTime = new Date(`${end}T00:00:00`).getTime()
+  return Math.round((endTime - startTime) / 86400000)
+}
+
+function getRecentLedgerRange() {
+  const end = formatDate()
+  return {
+    start: shiftDate(end, -6),
+    end
+  }
+}
+
+const DEFAULT_LEDGER_RANGE = getRecentLedgerRange()
 
 Page({
   data: {
@@ -64,8 +87,10 @@ Page({
     exchangeGroups: [],
     exchangeCategories: EXCHANGE_CATEGORIES,
     exchangeCategoryIndex: 0,
-    ledgerStart: '',
-    ledgerEnd: '',
+    ledgerStart: DEFAULT_LEDGER_RANGE.start,
+    ledgerEnd: DEFAULT_LEDGER_RANGE.end,
+    ledgerPickerMax: DEFAULT_LEDGER_RANGE.end,
+    loadingLedger: false,
     wishForm: { wishId: '', name: '', costCoins: '', imageFileId: '', imageTempPath: '', themeIcon: '' },
     editingWishForm: { wishId: '', name: '', costCoins: '', imageFileId: '', imageTempPath: '', themeIcon: '' },
     editingWishVisible: false,
@@ -77,13 +102,27 @@ Page({
     activeWishMenuTop: false,
     expenseForm: { itemName: '', amount: '', date: formatDate(), photoFileId: '', photoTempPath: '' },
     expenseAmountError: '',
-    exchangeForm: { itemId: '', name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] },
+    activeExpenseSwipeId: '',
+    pendingDeleteExpenseId: '',
+    deleteExpenseDialogVisible: false,
+    deleteExpensePin: '',
+    deleteExpensePinVisible: false,
+    deletingExpense: false,
+    exchangeForm: { itemId: '', originalPresetId: '', editing: false, name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] },
+    exchangeEditForm: { itemId: '', originalPresetId: '', name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] },
+    exchangeEditCategoryIndex: 0,
+    exchangeEditVisible: false,
     savingWish: false,
     savingExpense: false,
     savingExchange: false,
     exchangeLoaded: false,
     exchangeConfirmVisible: false,
     activeExchangeItem: null,
+    exchangeEditAuthVisible: false,
+    exchangeEditPin: '',
+    exchangeEditPinVisible: false,
+    pendingEditExchangeId: '',
+    verifyingExchangeEdit: false,
     coinSpinVisible: false,
     coinDelta: 0,
     coinAnimating: false,
@@ -95,6 +134,19 @@ Page({
     this.loadWallet()
   },
 
+  dismissWalletSwipe() {
+    if (this.data.activeExpenseSwipeId && !this.expenseTouchId) {
+      this.closeExpenseSwipe()
+    }
+  },
+
+  handleExpenseCardTap(event) {
+    const expenseId = event.currentTarget.dataset.id
+    if (this.data.activeExpenseSwipeId && this.data.activeExpenseSwipeId === expenseId) {
+      this.closeExpenseSwipe()
+    }
+  },
+
   async loadWallet(options = {}) {
     if (!app.globalData.activeChildId) return
     const cacheKey = `wallet_cache_${app.globalData.activeChildId}`
@@ -104,7 +156,7 @@ Page({
         totalCoins: cached.totalCoins || 0,
         streakDays: cached.streakDays || 0,
         wishes: cached.wishes || [],
-        expenses: cached.expenses || [],
+        expenses: this.decorateExpenses(cached.expenses || []),
         exchangeItems: cached.exchangeItems || [],
         exchangeGroups: cached.exchangeGroups || [],
         trend: cached.trend || []
@@ -114,7 +166,7 @@ Page({
       const week = getWeekRange()
       const startDate = this.data.ledgerStart || ''
       const endDate = this.data.ledgerEnd || ''
-      const [calendar, detail] = await Promise.all([
+      const [calendar, detail, weekExpenseDetail] = await Promise.all([
         callCloud('getCalendarSummary', {
           childId: app.globalData.activeChildId,
           mode: 'week',
@@ -128,6 +180,12 @@ Page({
           includeWishes: true,
           startDate,
           endDate
+        }),
+        callCloud('getDailyDetail', {
+          childId: app.globalData.activeChildId,
+          includeExpenses: true,
+          startDate: week.start,
+          endDate: week.end
         })
       ])
       const totalCoins = detail.totalCoins || 0
@@ -140,18 +198,50 @@ Page({
         wishes = localOnly.concat(wishes)
       }
       const exchangeItems = this.data.exchangeItems.length ? this.data.exchangeItems : DEFAULT_EXCHANGE_ITEMS
+      const calendarDays = calendar.days || []
+      const weekExpenseMap = {}
+      const weekExpenseCountMap = {}
+      ;(weekExpenseDetail.expenses || []).forEach((item) => {
+        const amount = Math.abs(Number(item.amount || 0))
+        if (!item.date || amount <= 0) return
+        weekExpenseMap[item.date] = (weekExpenseMap[item.date] || 0) + amount
+        weekExpenseCountMap[item.date] = (weekExpenseCountMap[item.date] || 0) + 1
+      })
+      const maxTrendAmount = Math.max(
+        1,
+        ...calendarDays.map((day) => {
+          const fallbackExpense = weekExpenseMap[day.date] || 0
+          return Math.max(
+            Math.abs(Number(day.incomeAmount !== undefined ? day.incomeAmount : day.total || 0)),
+            Math.max(Number(day.expenseAmount || 0), fallbackExpense)
+          )
+        })
+      )
       const walletData = {
         totalCoins,
         streakDays: detail.streakDays || 0,
         wishes,
-        expenses: detail.expenses || [],
+        expenses: this.decorateExpenses(detail.expenses || []),
         exchangeItems,
         exchangeGroups: this.groupExchangeItems(exchangeItems),
-        trend: (calendar.days || []).map((day) => ({
-          ...day,
-          label: day.date.slice(5),
-          height: Math.max(16, Math.min(210, Math.abs(day.total) * 18 + 12))
-        }))
+        trend: calendarDays.map((day) => {
+          const incomeAmount = Number(day.incomeAmount !== undefined ? day.incomeAmount : day.total || 0)
+          const fallbackExpense = weekExpenseMap[day.date] || 0
+          const expenseAmount = Math.max(Number(day.expenseAmount || 0), fallbackExpense)
+          return {
+            ...day,
+            incomeAmount,
+            expenseAmount,
+            expenseCount: Math.max(Number(day.expenseCount || 0), weekExpenseCountMap[day.date] || 0),
+            cumulativeCoins: Number(day.cumulativeCoins || 0),
+            label: day.date.slice(5),
+            incomeHeight: incomeAmount === 0 ? 0 : Math.max(16, Math.round(Math.abs(incomeAmount) / maxTrendAmount * 150)),
+            expenseHeight: expenseAmount === 0 ? 0 : Math.max(16, Math.round(expenseAmount / maxTrendAmount * 150)),
+            incomeText: incomeAmount > 0 ? `+${incomeAmount}` : incomeAmount < 0 ? `${incomeAmount}` : '',
+            expenseText: expenseAmount > 0 ? `-${expenseAmount}` : '',
+            cumulativeText: `${Number(day.cumulativeCoins || 0)}`
+          }
+        })
       }
       this.setData(walletData)
       wx.setStorageSync(cacheKey, walletData)
@@ -170,6 +260,47 @@ Page({
         .filter((item) => item.category === name)
         .map((item) => this.decorateExchangeItem(item))
     })).filter((group) => group.items.length)
+  },
+
+  decorateExpenses(items) {
+    return (items || []).map((item) => ({
+      ...item,
+      swipeOffset: item._id === this.data.activeExpenseSwipeId ? 88 : 0
+    }))
+  },
+
+  validateLedgerRange(start, end) {
+    if (!start || !end) {
+      return '请选择开始日期和结束日期'
+    }
+    const diff = daysBetween(start, end)
+    if (diff < 0) {
+      return '结束日期不能早于开始日期'
+    }
+    if (diff > MAX_LEDGER_RANGE_DAYS) {
+      return '最多只能选择一个月范围'
+    }
+    return ''
+  },
+
+  async refreshLedgerRange(start, end) {
+    const message = this.validateLedgerRange(start, end)
+    if (message) {
+      wx.showToast({ title: message, icon: 'none' })
+      return false
+    }
+    this.setData({
+      ledgerStart: start,
+      ledgerEnd: end,
+      loadingLedger: true,
+      activeExpenseSwipeId: ''
+    })
+    try {
+      await this.loadWallet()
+      return true
+    } finally {
+      this.setData({ loadingLedger: false })
+    }
   },
 
   decorateExchangeItem(item) {
@@ -201,7 +332,8 @@ Page({
 
   decorateWish(item, totalCoins = this.data.totalCoins) {
     const cost = Math.max(1, Number(item.costCoins || 1))
-    const percent = item.status === 'redeemed' ? 100 : Math.min(100, Math.round(Number(totalCoins || 0) / cost * 100))
+    const availableCoins = Math.max(0, Number(totalCoins || 0))
+    const percent = item.status === 'redeemed' ? 100 : Math.min(100, Math.round(availableCoins / cost * 100))
     return {
       ...item,
       costCoins: cost,
@@ -214,8 +346,8 @@ Page({
       progressDisplay: `${percent}%`,
       statusLine: item.status === 'redeemed'
         ? '已实现'
-        : cost > Number(totalCoins || 0) ? `还差 ${cost - Number(totalCoins || 0)} 金币` : '可以实现啦',
-      leftCoins: Math.max(0, cost - Number(totalCoins || 0))
+        : cost > availableCoins ? `还差 ${cost - availableCoins} 金币` : '可以实现啦',
+      leftCoins: Math.max(0, cost - availableCoins)
     }
   },
 
@@ -565,19 +697,146 @@ Page({
     this.setData({ 'expenseForm.date': event.detail.value })
   },
 
-  onLedgerStartChange(event) {
-    this.setData({ ledgerStart: event.detail.value })
-    this.loadWallet()
+  async onLedgerStartChange(event) {
+    await this.refreshLedgerRange(event.detail.value, this.data.ledgerEnd)
   },
 
-  onLedgerEndChange(event) {
-    this.setData({ ledgerEnd: event.detail.value })
-    this.loadWallet()
+  async onLedgerEndChange(event) {
+    await this.refreshLedgerRange(this.data.ledgerStart, event.detail.value)
   },
 
-  clearLedgerFilter() {
-    this.setData({ ledgerStart: '', ledgerEnd: '' })
-    this.loadWallet()
+  async clearLedgerFilter() {
+    const range = getRecentLedgerRange()
+    this.setData({ ledgerPickerMax: range.end })
+    await this.refreshLedgerRange(range.start, range.end)
+  },
+
+  onExpenseTouchStart(event) {
+    const touch = event.touches && event.touches[0]
+    if (!touch) return
+    this.expenseTouchStartX = touch.clientX
+    this.expenseTouchId = event.currentTarget.dataset.id
+    if (this.data.activeExpenseSwipeId && this.data.activeExpenseSwipeId !== this.expenseTouchId) {
+      this.closeExpenseSwipe()
+    }
+  },
+
+  onExpenseTouchMove(event) {
+    const touch = event.touches && event.touches[0]
+    const expenseId = event.currentTarget.dataset.id
+    if (!touch || !expenseId || expenseId !== this.expenseTouchId) return
+    const distance = this.expenseTouchStartX - touch.clientX
+    if (distance <= 0) {
+      this.updateExpenseSwipe(expenseId, 0)
+      return
+    }
+    this.updateExpenseSwipe(expenseId, Math.min(88, distance))
+  },
+
+  onExpenseTouchEnd(event) {
+    const expenseId = event.currentTarget.dataset.id
+    if (!expenseId) return
+    const expense = this.data.expenses.find((item) => item._id === expenseId)
+    const offset = expense && expense.swipeOffset >= 80 ? 88 : 0
+    this.updateExpenseSwipe(expenseId, offset)
+    this.expenseTouchStartX = 0
+    this.expenseTouchId = ''
+  },
+
+  updateExpenseSwipe(expenseId, offset) {
+    const expenses = this.data.expenses.map((item) => ({
+      ...item,
+      swipeOffset: item._id === expenseId ? offset : 0
+    }))
+    this.setData({
+      expenses,
+      activeExpenseSwipeId: offset > 0 ? expenseId : ''
+    })
+  },
+
+  closeExpenseSwipe() {
+    const expenses = this.data.expenses.map((item) => ({
+      ...item,
+      swipeOffset: 0
+    }))
+    this.setData({
+      expenses,
+      activeExpenseSwipeId: ''
+    })
+  },
+
+  openDeleteExpenseDialog(event) {
+    const expenseId = event.currentTarget.dataset.id
+    if (!expenseId) return
+    this.setData({
+      pendingDeleteExpenseId: expenseId,
+      deleteExpenseDialogVisible: true,
+      deleteExpensePin: '',
+      deleteExpensePinVisible: false
+    })
+  },
+
+  closeDeleteExpenseDialog() {
+    if (this.data.deletingExpense) return
+    this.setData({
+      pendingDeleteExpenseId: '',
+      deleteExpenseDialogVisible: false,
+      deleteExpensePin: '',
+      deleteExpensePinVisible: false
+    })
+  },
+
+  onDeleteExpensePinInput(event) {
+    this.setData({ deleteExpensePin: event.detail.value })
+  },
+
+  toggleDeleteExpensePinVisible() {
+    this.setData({ deleteExpensePinVisible: !this.data.deleteExpensePinVisible })
+  },
+
+  confirmDeleteExpenseAuth() {
+    if (!String(this.data.deleteExpensePin || '').trim()) {
+      wx.showToast({ title: '请输入家长 PIN', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '确认删除',
+      content: '删除后不可恢复，并会重新计算金币余额。确定删除这条消费记录吗？',
+      cancelText: '取消',
+      confirmText: '确认删除',
+      confirmColor: '#d94444',
+      success: (res) => {
+        if (res.confirm) {
+          this.deleteExpenseById()
+        }
+      }
+    })
+  },
+
+  async deleteExpenseById() {
+    const transactionId = this.data.pendingDeleteExpenseId
+    if (!transactionId) return
+    this.setData({ deletingExpense: true })
+    try {
+      await callCloud('updateWish', {
+        action: 'deleteExpense',
+        childId: app.globalData.activeChildId,
+        transactionId,
+        pin: this.data.deleteExpensePin
+      })
+      this.setData({
+        deleteExpenseDialogVisible: false,
+        pendingDeleteExpenseId: '',
+        deleteExpensePin: '',
+        activeExpenseSwipeId: ''
+      })
+      await this.loadWallet()
+      wx.showToast({ title: '已删除', icon: 'success' })
+    } catch (error) {
+      showError(error, error.message || '删除失败')
+    } finally {
+      this.setData({ deletingExpense: false })
+    }
   },
 
   async saveExpense() {
@@ -593,6 +852,11 @@ Page({
     }
     if (!form.date) {
       wx.showToast({ title: '请选择消费时间', icon: 'none' })
+      return
+    }
+    const ledgerRangeError = this.validateLedgerRange(this.data.ledgerStart, this.data.ledgerEnd)
+    if (ledgerRangeError) {
+      wx.showToast({ title: ledgerRangeError, icon: 'none' })
       return
     }
     this.setData({ savingExpense: true })
@@ -633,18 +897,95 @@ Page({
   },
 
   editExchange(event) {
-    const item = this.data.exchangeItems.find((entry) => entry._id === event.currentTarget.dataset.id)
-    if (!item || item.preset) return
+    const itemId = event.currentTarget.dataset.id
+    if (!itemId) return
+    this.setData({
+      pendingEditExchangeId: itemId,
+      exchangeEditAuthVisible: true,
+      exchangeEditPin: '',
+      exchangeEditPinVisible: false
+    })
+  },
+
+  closeExchangeEditAuth() {
+    if (this.data.verifyingExchangeEdit) return
+    this.setData({
+      exchangeEditAuthVisible: false,
+      exchangeEditPin: '',
+      exchangeEditPinVisible: false,
+      pendingEditExchangeId: ''
+    })
+  },
+
+  onExchangeEditPinInput(event) {
+    this.setData({ exchangeEditPin: event.detail.value })
+  },
+
+  toggleExchangeEditPinVisible() {
+    this.setData({ exchangeEditPinVisible: !this.data.exchangeEditPinVisible })
+  },
+
+  async confirmExchangeEditAuth() {
+    if (!String(this.data.exchangeEditPin || '').trim()) {
+      wx.showToast({ title: '请输入家长 PIN', icon: 'none' })
+      return
+    }
+    this.setData({ verifyingExchangeEdit: true })
+    try {
+      await callCloud('saveTasks', {
+        action: 'verifyPin',
+        pin: this.data.exchangeEditPin
+      })
+      const item = this.findExchangeItem(this.data.pendingEditExchangeId)
+      if (!item) throw new Error('兑换物品不存在')
+      this.enterExchangeEdit(item)
+      this.setData({
+        exchangeEditAuthVisible: false,
+        exchangeEditPin: '',
+        exchangeEditPinVisible: false,
+        pendingEditExchangeId: ''
+      })
+    } catch (error) {
+      showError(error, error.message || '验证失败')
+    } finally {
+      this.setData({ verifyingExchangeEdit: false })
+    }
+  },
+
+  enterExchangeEdit(item) {
     const categoryIndex = Math.max(0, EXCHANGE_CATEGORIES.indexOf(item.category))
     this.setData({
-      exchangeCategoryIndex: categoryIndex,
-      exchangeForm: {
-        itemId: item._id,
+      exchangeEditCategoryIndex: categoryIndex,
+      exchangeEditVisible: true,
+      exchangeEditForm: {
+        itemId: item.preset ? '' : item._id,
+        originalPresetId: item.preset ? item._id : item.originalPresetId || '',
         name: item.name || '',
         costCoins: String(item.costCoins || ''),
         description: item.description || '',
         category: item.category || EXCHANGE_CATEGORIES[0]
       }
+    })
+  },
+
+  closeExchangeEditDialog() {
+    this.setData({
+      exchangeEditVisible: false,
+      exchangeEditCategoryIndex: 0,
+      exchangeEditForm: { itemId: '', originalPresetId: '', name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] }
+    })
+  },
+
+  onExchangeEditInput(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`exchangeEditForm.${field}`]: event.detail.value })
+  },
+
+  onExchangeEditCategoryChange(event) {
+    const index = Number(event.detail.value)
+    this.setData({
+      exchangeEditCategoryIndex: index,
+      'exchangeEditForm.category': EXCHANGE_CATEGORIES[index]
     })
   },
 
@@ -740,7 +1081,7 @@ Page({
   resetExchangeForm() {
     this.setData({
       exchangeCategoryIndex: 0,
-      exchangeForm: { itemId: '', name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] }
+      exchangeForm: { itemId: '', originalPresetId: '', editing: false, name: '', costCoins: '', description: '', category: EXCHANGE_CATEGORIES[0] }
     })
   },
 
@@ -756,6 +1097,7 @@ Page({
         action: form.itemId ? 'editExchangeItem' : 'addExchangeItem',
         childId: app.globalData.activeChildId,
         itemId: form.itemId,
+        originalPresetId: form.originalPresetId,
         name: form.name,
         costCoins: form.costCoins,
         description: form.description,
@@ -763,6 +1105,34 @@ Page({
       })
       this.resetExchangeForm()
       await this.loadWallet()
+      wx.showToast({ title: '兑换项已保存', icon: 'success' })
+    } catch (error) {
+      showError(error, '兑换项保存失败')
+    } finally {
+      this.setData({ savingExchange: false })
+    }
+  },
+
+  async saveExchangeEditItem() {
+    const form = this.data.exchangeEditForm
+    if (!form.name.trim() || !Number(form.costCoins)) {
+      wx.showToast({ title: '名称和金币都要填哦', icon: 'none' })
+      return
+    }
+    this.setData({ savingExchange: true })
+    try {
+      await callCloud('updateWish', {
+        action: form.itemId ? 'editExchangeItem' : 'addExchangeItem',
+        childId: app.globalData.activeChildId,
+        itemId: form.itemId,
+        originalPresetId: form.originalPresetId,
+        name: form.name,
+        costCoins: form.costCoins,
+        description: form.description,
+        category: form.category
+      })
+      this.closeExchangeEditDialog()
+      await this.loadExchangeItems()
       wx.showToast({ title: '兑换项已保存', icon: 'success' })
     } catch (error) {
       showError(error, '兑换项保存失败')
@@ -895,6 +1265,7 @@ Page({
   },
 
   previewImage(event) {
+    this.closeExpenseSwipe()
     const url = event.currentTarget.dataset.url
     if (url) wx.previewImage({ urls: [url], current: url })
   },

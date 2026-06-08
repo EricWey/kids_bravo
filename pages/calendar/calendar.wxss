@@ -141,6 +141,10 @@
   height: 28rpx;
 }
 
+.coin-zero {
+  color: #9a9286;
+}
+
 .expense-dot {
   position: absolute;
   right: 6rpx;

@@ -1,4 +1,4 @@
-const { db, ok, getOpenid, getChild, verifyPin, recomputeChildStats } = require('./_shared/db')
+const { cloud, db, ok, getOpenid, getChild, verifyPin, recomputeChildStats } = require('./_shared/db')
 
 const EXCHANGE_CATEGORIES = ['游玩体验', '屏幕时间', '美食玩具', '学习成长']
 
@@ -12,6 +12,10 @@ function parsePositiveInteger(value) {
     throw new Error('请输入大于0的整数')
   }
   return Number(text)
+}
+
+async function writeOperationLog(data) {
+  await db.collection('operation_logs').add({ data }).catch(() => {})
 }
 
 exports.main = async (event = {}) => {
@@ -111,6 +115,70 @@ exports.main = async (event = {}) => {
     return ok({ totalCoins: stats.totalCoins })
   }
 
+  if (event.action === 'deleteExpense') {
+    const transactionId = cleanText(event.transactionId, 80)
+    const now = new Date()
+    const wxContext = cloud.getWXContext()
+    const logBase = {
+      ownerOpenid: openid,
+      operatorOpenid: openid,
+      childId,
+      action: 'deleteExpense',
+      transactionId,
+      operationTime: now,
+      createdAt: now,
+      operationIp: wxContext.CLIENTIP || wxContext.CLIENT_IP || ''
+    }
+    try {
+      if (!transactionId) throw new Error('消费记录不存在')
+      await verifyPin(openid, String(event.pin || '').trim())
+      const transaction = await db.collection('coin_transactions').doc(transactionId).get()
+      if (!transaction.data || transaction.data.ownerOpenid !== openid || transaction.data.childId !== childId) {
+        throw new Error('消费记录不存在')
+      }
+      if (!['expense', 'exchange', 'wish'].includes(transaction.data.type)) {
+        throw new Error('只能删除消费记录')
+      }
+      if (transaction.data.voided === true) {
+        throw new Error('消费记录已删除')
+      }
+      await db.collection('coin_transactions').doc(transactionId).update({
+        data: {
+          voided: true,
+          voidedAt: now,
+          voidedBy: openid,
+          updatedAt: now
+        }
+      })
+      const stats = await recomputeChildStats(openid, childId)
+      await db.collection('children').doc(childId).update({
+        data: {
+          totalCoins: stats.totalCoins,
+          updatedAt: now
+        }
+      })
+      await writeOperationLog({
+        ...logBase,
+        result: 'success',
+        transactionSnapshot: {
+          itemName: transaction.data.itemName || '',
+          reason: transaction.data.reason || '',
+          amount: transaction.data.amount || 0,
+          date: transaction.data.date || '',
+          type: transaction.data.type || ''
+        }
+      })
+      return ok({ totalCoins: stats.totalCoins })
+    } catch (error) {
+      await writeOperationLog({
+        ...logBase,
+        result: 'failure',
+        reason: error.message || '删除失败'
+      })
+      throw error
+    }
+  }
+
   if (event.action === 'addExchangeItem' || event.action === 'editExchangeItem') {
     const name = cleanText(event.name, 32)
     if (!name) throw new Error('请填写兑换物品')
@@ -121,6 +189,7 @@ exports.main = async (event = {}) => {
       costCoins: parsePositiveInteger(event.costCoins),
       description: cleanText(event.description, 80),
       category: EXCHANGE_CATEGORIES.includes(event.category) ? event.category : EXCHANGE_CATEGORIES[0],
+      originalPresetId: cleanText(event.originalPresetId, 80),
       updatedAt: new Date()
     }
     if (event.action === 'addExchangeItem') {

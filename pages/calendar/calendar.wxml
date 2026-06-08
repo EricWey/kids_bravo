@@ -21,7 +21,7 @@
         <view class="calendar-grid {{mode}}">
           <view wx:for="{{item.days}}" wx:key="date" wx:for-item="day" class="day-cell {{day.isToday ? 'today' : ''}} {{day.date === selectedDate ? 'selected' : ''}} {{day.isFuture ? 'future' : ''}}" data-date="{{day.date}}" bindtap="selectDay">
             <view class="day-number">{{day.day}}</view>
-            <view wx:if="{{!day.isFuture}}" class="{{day.total >= 0 ? 'coin-plus' : 'coin-minus'}}">{{day.total >= 0 ? '+' : ''}}{{day.total}}</view>
+            <view wx:if="{{!day.isFuture}}" class="{{day.coinClass}}">{{day.total >= 0 ? '+' : ''}}{{day.total}}</view>
             <view wx:else class="coin-placeholder"></view>
             <view wx:if="{{day.expenseCount}}" class="expense-dot">消费</view>
           </view>

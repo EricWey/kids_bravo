@@ -75,7 +75,24 @@ exports.main = async (event = {}) => {
     return ok()
   }
 
+  if (event.action === 'setTaskEnabled') {
+    await getChild(openid, event.childId)
+    const task = await db.collection('tasks').doc(event.taskId).get()
+    if (!task.data || task.data.ownerOpenid !== openid || task.data.childId !== event.childId) {
+      throw new Error('任务不存在')
+    }
+    const enabled = event.enabled !== false
+    await db.collection('tasks').doc(event.taskId).update({
+      data: {
+        enabled,
+        updatedAt: now
+      }
+    })
+    return ok()
+  }
+
   if (event.action === 'deleteTask') {
+    await verifyPin(openid, String(event.pin || '').trim())
     await getChild(openid, event.childId)
     const task = await db.collection('tasks').doc(event.taskId).get()
     if (!task.data || task.data.ownerOpenid !== openid || task.data.childId !== event.childId) {

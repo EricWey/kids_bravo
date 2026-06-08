@@ -1,6 +1,7 @@
 const app = getApp()
 const { callCloud, showError, formatDate } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
+const taskStatus = require('../../utils/taskStatus')
 
 Page({
   data: {
@@ -14,8 +15,32 @@ Page({
     confetti: Array.from({ length: 10 }, (_, index) => ({ id: index }))
   },
 
+  onLoad() {
+    this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.handleTaskStatusChange(change))
+  },
+
+  onUnload() {
+    if (this.unsubscribeTaskStatus) {
+      this.unsubscribeTaskStatus()
+      this.unsubscribeTaskStatus = null
+    }
+  },
+
   onShow() {
     syncTab(this, 1)
+    this.loadToday()
+  },
+
+  handleTaskStatusChange(change) {
+    if (!change || change.childId !== this.data.activeChildId) return
+    if (change.enabled === false) {
+      const categories = this.data.categories.map((category) => ({
+        ...category,
+        tasks: (category.tasks || []).filter((task) => task._id !== change.taskId)
+      }))
+      this.setData({ categories })
+      return
+    }
     this.loadToday()
   },
 
@@ -34,7 +59,7 @@ Page({
         activeChildId: child._id,
         childName: child.nickname,
         dailyTotal: detail.dailyTotal || 0,
-        categories: detail.categories || []
+        categories: taskStatus.applyTaskStatusGroups(detail.categories || [], child._id)
       })
     } catch (error) {
       showError(error)
@@ -53,7 +78,7 @@ Page({
       })
       this.setData({
         dailyTotal: result.dailyTotal,
-        categories: result.categories
+        categories: taskStatus.applyTaskStatusGroups(result.categories || [], this.data.activeChildId)
       })
       wx.showToast({
         title: status === 'done' ? '金币闪亮入账' : '已记录，明天继续',
@@ -77,7 +102,7 @@ Page({
       })
       this.setData({
         dailyTotal: result.dailyTotal,
-        categories: result.categories
+        categories: taskStatus.applyTaskStatusGroups(result.categories || [], this.data.activeChildId)
       })
       wx.showToast({ title: '已重置，可重新选择', icon: 'none' })
     } catch (error) {
