@@ -4,7 +4,6 @@
     "pages/today/today",
     "pages/calendar/calendar",
     "pages/wallet/wallet",
-    "pages/achievements/achievements",
     "pages/tasks/tasks",
     "pages/templates/templates",
     "pages/settings/settings"
@@ -38,10 +37,6 @@
       {
         "pagePath": "pages/wallet/wallet",
         "text": "金币"
-      },
-      {
-        "pagePath": "pages/achievements/achievements",
-        "text": "成就"
       }
     ]
   },

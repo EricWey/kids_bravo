@@ -1,5 +1,5 @@
 const app = getApp()
-const { callCloud, showError, formatDate, getWeekRange } = require('../../utils/cloud')
+const { callCloud, showError, formatDate, getWeekRange, markPerf, clearCloudCache } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
 
 const MODULES = [
@@ -149,6 +149,14 @@ Page({
 
   async loadWallet(options = {}) {
     if (!app.globalData.activeChildId) return
+    const now = Date.now()
+    const minInterval = options.minInterval === undefined ? 12000 : options.minInterval
+    if (!options.forceRefresh && this.walletLoading) return
+    if (!options.forceRefresh && this.walletLoadedAt && minInterval && now - this.walletLoadedAt < minInterval) return
+    const done = markPerf('wallet.loadWallet')
+    this.walletLoading = true
+    const requestId = now
+    this.walletRequestId = requestId
     const cacheKey = `wallet_cache_${app.globalData.activeChildId}`
     const cached = wx.getStorageSync(cacheKey)
     if (cached && cached.totalCoins !== undefined) {
@@ -171,7 +179,10 @@ Page({
           childId: app.globalData.activeChildId,
           mode: 'week',
           start: week.start,
-          end: week.end
+          end: week.end,
+          cacheTtl: 30000,
+          dedupe: true,
+          forceRefresh: !!options.forceRefresh
         }),
         callCloud('getDailyDetail', {
           childId: app.globalData.activeChildId,
@@ -179,15 +190,22 @@ Page({
           includeExpenses: true,
           includeWishes: true,
           startDate,
-          endDate
+          endDate,
+          cacheTtl: 15000,
+          dedupe: true,
+          forceRefresh: !!options.forceRefresh
         }),
         callCloud('getDailyDetail', {
           childId: app.globalData.activeChildId,
           includeExpenses: true,
           startDate: week.start,
-          endDate: week.end
+          endDate: week.end,
+          cacheTtl: 30000,
+          dedupe: true,
+          forceRefresh: !!options.forceRefresh
         })
       ])
+      if (this.walletRequestId !== requestId) return
       const totalCoins = detail.totalCoins || 0
       let wishes = Array.isArray(detail.wishes)
         ? detail.wishes.map((item) => this.decorateWish(item, totalCoins))
@@ -244,12 +262,16 @@ Page({
         })
       }
       this.setData(walletData)
+      this.walletLoadedAt = Date.now()
       wx.setStorageSync(cacheKey, walletData)
       if (this.data.activeModule === 'exchange' && !this.data.exchangeLoaded) {
         this.loadExchangeItems()
       }
+      done(`wishes=${wishes.length} expenses=${walletData.expenses.length}`)
     } catch (error) {
       showError(error)
+    } finally {
+      this.walletLoading = false
     }
   },
 
@@ -296,7 +318,7 @@ Page({
       activeExpenseSwipeId: ''
     })
     try {
-      await this.loadWallet()
+      await this.loadWallet({ forceRefresh: true, minInterval: 0 })
       return true
     } finally {
       this.setData({ loadingLedger: false })
@@ -464,6 +486,7 @@ Page({
         imageFileId,
         themeIcon
       })
+      clearCloudCache('getDailyDetail:')
       this.applySavedWish(result.wish || {
         _id: form.wishId || `local_wish_${Date.now()}`,
         name: form.name.trim(),
@@ -475,7 +498,7 @@ Page({
         updatedAt: new Date()
       }, Boolean(form.wishId))
       this.resetWishForm()
-      await this.loadWallet({ preserveLocalWishes: true })
+      await this.loadWallet({ preserveLocalWishes: true, forceRefresh: true, minInterval: 0 })
       wx.showToast({ title: '愿望已保存', icon: 'success' })
     } catch (error) {
       showError(error, '愿望保存失败')
@@ -564,6 +587,7 @@ Page({
         imageFileId,
         themeIcon: form.themeIcon
       })
+      clearCloudCache('getDailyDetail:')
       this.applySavedWish(result.wish || {
         _id: form.wishId,
         name: form.name.trim(),
@@ -574,7 +598,7 @@ Page({
         updatedAt: new Date()
       }, true)
       this.closeEditWishDialog()
-      await this.loadWallet({ preserveLocalWishes: true })
+      await this.loadWallet({ preserveLocalWishes: true, forceRefresh: true, minInterval: 0 })
       wx.showToast({ title: '愿望已更新', icon: 'success' })
     } catch (error) {
       showError(error, '愿望保存失败')
@@ -610,6 +634,7 @@ Page({
         childId: app.globalData.activeChildId,
         wishId
       })
+      clearCloudCache('getDailyDetail:')
       const wishes = this.data.wishes.filter((item) => item._id !== wishId)
       this.setData({ wishes })
       this.updateWalletCache({ wishes })
@@ -647,7 +672,8 @@ Page({
             childId: app.globalData.activeChildId,
             wishId
           })
-          await this.loadWallet()
+          clearCloudCache('getDailyDetail:')
+          await this.loadWallet({ forceRefresh: true, minInterval: 0 })
           wx.showToast({ title: '已删除', icon: 'success' })
         } catch (error) {
           showError(error)
@@ -824,13 +850,15 @@ Page({
         transactionId,
         pin: this.data.deleteExpensePin
       })
+      clearCloudCache('getDailyDetail:')
+      clearCloudCache('getCalendarSummary:')
       this.setData({
         deleteExpenseDialogVisible: false,
         pendingDeleteExpenseId: '',
         deleteExpensePin: '',
         activeExpenseSwipeId: ''
       })
-      await this.loadWallet()
+      await this.loadWallet({ forceRefresh: true, minInterval: 0 })
       wx.showToast({ title: '已删除', icon: 'success' })
     } catch (error) {
       showError(error, error.message || '删除失败')
@@ -870,11 +898,13 @@ Page({
         date: form.date,
         photoFileId
       })
+      clearCloudCache('getDailyDetail:')
+      clearCloudCache('getCalendarSummary:')
       this.setData({
         expenseForm: { itemName: '', amount: '', date: formatDate(), photoFileId: '', photoTempPath: '' },
         expenseAmountError: ''
       })
-      await this.loadWallet()
+      await this.loadWallet({ forceRefresh: true, minInterval: 0 })
       wx.showToast({ title: '消费已记录', icon: 'success' })
     } catch (error) {
       showError(error, '消费记录失败')
@@ -1039,6 +1069,8 @@ Page({
         name: item.name,
         costCoins: cost
       })
+      clearCloudCache('getDailyDetail:')
+      clearCloudCache('getCalendarSummary:')
       const nextTotal = result.totalCoins !== undefined
         ? Number(result.totalCoins || 0)
         : Math.max(0, Number(this.data.totalCoins || 0) - cost)
@@ -1058,7 +1090,7 @@ Page({
           activeExchangeItem: null
         })
         wx.showToast({ title: '兑换成功', icon: 'success' })
-        await this.loadWallet()
+        await this.loadWallet({ forceRefresh: true, minInterval: 0 })
         setTimeout(() => {
           this.setData({ lastRedeemedExchangeId: '' })
         }, 900)
@@ -1103,8 +1135,9 @@ Page({
         description: form.description,
         category: form.category
       })
+      clearCloudCache('getDailyDetail:')
       this.resetExchangeForm()
-      await this.loadWallet()
+      await this.loadWallet({ forceRefresh: true, minInterval: 0 })
       wx.showToast({ title: '兑换项已保存', icon: 'success' })
     } catch (error) {
       showError(error, '兑换项保存失败')
@@ -1131,6 +1164,7 @@ Page({
         description: form.description,
         category: form.category
       })
+      clearCloudCache('getDailyDetail:')
       this.closeExchangeEditDialog()
       await this.loadExchangeItems()
       wx.showToast({ title: '兑换项已保存', icon: 'success' })
@@ -1154,7 +1188,8 @@ Page({
             childId: app.globalData.activeChildId,
             itemId
           })
-          await this.loadWallet()
+          clearCloudCache('getDailyDetail:')
+          await this.loadWallet({ forceRefresh: true, minInterval: 0 })
           wx.showToast({ title: '已下架', icon: 'success' })
         } catch (error) {
           showError(error)

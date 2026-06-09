@@ -21,7 +21,7 @@
         <view class="delete-action" data-id="{{item._id}}" data-name="{{item.nickname}}" catchtap="confirmDelete">删除</view>
         <view class="card child-card {{activeChildId === item._id ? 'active' : ''}}" style="transform: translateX({{item.offsetX}}px);" data-id="{{item._id}}" data-index="{{index}}" bindtap="selectChild" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
           <view class="child-avatar" catchtap="chooseAvatar" data-id="{{item._id}}">
-            <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill"></image>
+            <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load></image>
             <text wx:else>{{item.gender === 'girl' ? '花' : '星'}}</text>
           </view>
           <view class="child-info">

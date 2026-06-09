@@ -1,11 +1,32 @@
+const perf = require('./perf')
+
 function callCloud(name, data = {}) {
-  return wx.cloud.callFunction({ name, data }).then((res) => {
+  const {
+    cacheTtl = 0,
+    dedupe = false,
+    forceRefresh = false,
+    ...payload
+  } = data || {}
+  const cacheKey = cacheTtl || dedupe ? perf.makeCacheKey(name, payload) : ''
+  if (cacheTtl && !forceRefresh) {
+    const cached = perf.getCache(cacheKey, cacheTtl)
+    if (cached) return Promise.resolve(cached)
+  }
+  if (dedupe) {
+    const pending = perf.getPending(cacheKey)
+    if (pending) return pending
+  }
+  const request = wx.cloud.callFunction({ name, data: payload }).then((res) => {
     const result = res.result || {}
     if (result.ok === false) {
       throw new Error(result.message || '云函数调用失败')
     }
-    return result.data === undefined ? result : result.data
+    const value = result.data === undefined ? result : result.data
+    if (cacheTtl) perf.setCache(cacheKey, value)
+    return value
   })
+  if (dedupe) perf.setPending(cacheKey, request)
+  return request
 }
 
 function showError(error, fallback = '操作失败，请稍后再试') {
@@ -45,5 +66,7 @@ module.exports = {
   showError,
   formatDate,
   getWeekRange,
-  getMonthRange
+  getMonthRange,
+  clearCloudCache: perf.clearCache,
+  markPerf: perf.mark
 }

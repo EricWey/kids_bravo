@@ -1,5 +1,5 @@
 const app = getApp()
-const { callCloud, showError, formatDate } = require('../../utils/cloud')
+const { callCloud, showError, formatDate, markPerf, clearCloudCache } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
 const taskStatus = require('../../utils/taskStatus')
 
@@ -8,8 +8,13 @@ Page({
     today: formatDate(),
     activeChildId: '',
     childName: '',
+    childAvatarUrl: '',
+    childAvatarLoadError: false,
+    childAvatarPlaceholder: '星',
     dailyTotal: 0,
     categories: [],
+    submittingTaskId: '',
+    loadingToday: false,
     celebrationVisible: false,
     encourageVisible: false,
     confetti: Array.from({ length: 10 }, (_, index) => ({ id: index }))
@@ -45,30 +50,55 @@ Page({
   },
 
   async loadToday() {
+    const done = markPerf('today.loadToday')
     const child = app.getActiveChild && app.getActiveChild()
     if (!child) {
-      this.setData({ activeChildId: '', childName: '', categories: [], dailyTotal: 0 })
+      this.setData({
+        activeChildId: '',
+        childName: '',
+        childAvatarUrl: '',
+        childAvatarLoadError: false,
+        childAvatarPlaceholder: '星',
+        categories: [],
+        dailyTotal: 0,
+        loadingToday: false
+      })
       return
     }
+    const requestId = Date.now()
+    this.todayRequestId = requestId
+    this.setData({ loadingToday: true })
     try {
       const detail = await callCloud('getDailyDetail', {
         childId: child._id,
-        date: this.data.today
+        date: this.data.today,
+        cacheTtl: 12000,
+        dedupe: true
       })
+      if (this.todayRequestId !== requestId) return
       this.setData({
         activeChildId: child._id,
         childName: child.nickname,
+        childAvatarUrl: child.avatarUrl || '',
+        childAvatarLoadError: false,
+        childAvatarPlaceholder: child.nickname ? child.nickname.slice(0, 1) : (child.gender === 'girl' ? '花' : '星'),
         dailyTotal: detail.dailyTotal || 0,
-        categories: taskStatus.applyTaskStatusGroups(detail.categories || [], child._id)
+        categories: taskStatus.applyTaskStatusGroups(detail.categories || [], child._id),
+        loadingToday: false
       })
+      done(`tasks=${(detail.categories || []).reduce((sum, group) => sum + (group.tasks || []).length, 0)}`)
     } catch (error) {
+      if (this.todayRequestId === requestId) this.setData({ loadingToday: false })
       showError(error)
     }
   },
 
   async submit(event) {
     const { id, status } = event.currentTarget.dataset
+    if (!id || this.data.submittingTaskId) return
+    const done = markPerf(`today.submit.${status}`)
     wx.vibrateShort({ type: 'light' })
+    this.setData({ submittingTaskId: id })
     try {
       const result = await callCloud('submitCheckin', {
         childId: this.data.activeChildId,
@@ -76,23 +106,24 @@ Page({
         status,
         date: this.data.today
       })
-      this.setData({
-        dailyTotal: result.dailyTotal,
-        categories: taskStatus.applyTaskStatusGroups(result.categories || [], this.data.activeChildId)
-      })
-      wx.showToast({
-        title: status === 'done' ? '金币闪亮入账' : '已记录，明天继续',
-        icon: 'none'
-      })
-      this.playFeedback(status)
+      this.updateTaskResult(result, id)
+      clearCloudCache('getDailyDetail:')
+      clearCloudCache('getCalendarSummary:')
+      setTimeout(() => this.playFeedback(status), 40)
+      done()
     } catch (error) {
       showError(error)
+    } finally {
+      this.setData({ submittingTaskId: '' })
     }
   },
 
   async resetTask(event) {
     const { id } = event.currentTarget.dataset
+    if (!id || this.data.submittingTaskId) return
+    const done = markPerf('today.resetTask')
     wx.vibrateShort({ type: 'light' })
+    this.setData({ submittingTaskId: id })
     try {
       const result = await callCloud('submitCheckin', {
         childId: this.data.activeChildId,
@@ -100,20 +131,47 @@ Page({
         status: 'reset',
         date: this.data.today
       })
-      this.setData({
-        dailyTotal: result.dailyTotal,
-        categories: taskStatus.applyTaskStatusGroups(result.categories || [], this.data.activeChildId)
-      })
+      this.updateTaskResult(result, id)
+      clearCloudCache('getDailyDetail:')
+      clearCloudCache('getCalendarSummary:')
       wx.showToast({ title: '已重置，可重新选择', icon: 'none' })
+      done()
     } catch (error) {
       showError(error, '重置失败')
+    } finally {
+      this.setData({ submittingTaskId: '' })
     }
+  },
+
+  updateTaskResult(result = {}, taskId) {
+    const nextGroups = taskStatus.applyTaskStatusGroups(result.categories || [], this.data.activeChildId)
+    const updates = {
+      dailyTotal: result.dailyTotal || 0
+    }
+    let matched = false
+    nextGroups.some((group, groupIndex) => {
+      const taskIndex = (group.tasks || []).findIndex((task) => task._id === taskId)
+      if (taskIndex < 0) return false
+      updates[`categories[${groupIndex}].tasks[${taskIndex}]`] = group.tasks[taskIndex]
+      matched = true
+      return true
+    })
+    if (!matched || !this.data.categories.length) {
+      updates.categories = nextGroups
+    }
+    this.setData(updates)
   },
 
   playFeedback(status) {
     if (this.feedbackTimer) clearTimeout(this.feedbackTimer)
     if (status === 'done') {
       this.setData({ celebrationVisible: true, encourageVisible: false })
+      wx.showModal({
+        title: '我做到啦！✅',
+        content: '完成打卡！',
+        showCancel: false,
+        confirmText: '太棒啦'
+      })
     } else {
       this.setData({ celebrationVisible: false, encourageVisible: true })
     }
@@ -123,6 +181,26 @@ Page({
         encourageVisible: false
       })
     }, 1600)
+  },
+
+  closeEncourage() {
+    if (this.feedbackTimer) clearTimeout(this.feedbackTimer)
+    this.setData({ encourageVisible: false })
+  },
+
+  onHeroAvatarError() {
+    this.setData({ childAvatarLoadError: true })
+  },
+
+  previewHeroAvatar() {
+    if (!this.data.childAvatarUrl || this.data.childAvatarLoadError) {
+      wx.showToast({ title: '还没有头像照片', icon: 'none' })
+      return
+    }
+    wx.previewImage({
+      urls: [this.data.childAvatarUrl],
+      current: this.data.childAvatarUrl
+    })
   },
 
   goTasks() {

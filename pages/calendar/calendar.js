@@ -1,5 +1,5 @@
 const app = getApp()
-const { callCloud, showError, formatDate, getWeekRange, getMonthRange } = require('../../utils/cloud')
+const { callCloud, showError, formatDate, getWeekRange, getMonthRange, markPerf } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
 
 Page({
@@ -54,6 +54,9 @@ Page({
       this.setData({ days: [], panels: [], selectedTasks: [], selectedExpenses: [] })
       return
     }
+    const done = markPerf('calendar.loadCalendar')
+    const requestId = Date.now()
+    this.calendarRequestId = requestId
     try {
       const viewDate = new Date(`${this.data.currentDate}T00:00:00`)
       const panelDates = [-1, 0, 1].map((offset) => this.getShiftedDate(viewDate, offset))
@@ -62,8 +65,11 @@ Page({
         childId: app.globalData.activeChildId,
         mode: this.data.mode,
         start: range.start,
-        end: range.end
+        end: range.end,
+        cacheTtl: 30000,
+        dedupe: true
       })))
+      if (this.calendarRequestId !== requestId) return
       const today = formatDate()
       const panels = results.map((result, index) => ({
         key: `${this.data.mode}_${index}_${formatDate(panelDates[index])}`,
@@ -84,6 +90,7 @@ Page({
         panels
       })
       this.loadDetail(this.data.selectedDate)
+      done(`mode=${this.data.mode}`)
     } catch (error) {
       showError(error)
     }
@@ -143,12 +150,19 @@ Page({
     const elapsed = Math.max(16, now - this.data.swipeLastTime)
     const velocity = (touch.clientX - this.data.swipeLastX) / elapsed
     const bounded = this.getBoundedOffset(deltaX)
-    this.setData({
+    this.pendingDragState = {
       dragOffset: bounded,
       swipeLastX: touch.clientX,
       swipeLastTime: now,
       swipeVelocity: velocity
-    })
+    }
+    if (this.dragFrameTimer) return
+    this.dragFrameTimer = setTimeout(() => {
+      this.dragFrameTimer = null
+      if (!this.pendingDragState) return
+      this.setData(this.pendingDragState)
+      this.pendingDragState = null
+    }, 16)
   },
 
   onCalendarTouchEnd(event) {
@@ -290,12 +304,18 @@ Page({
   },
 
   async loadDetail(date) {
+    if (!app.globalData.activeChildId) return
+    const requestId = Date.now()
+    this.detailRequestId = requestId
     try {
       const detail = await callCloud('getDailyDetail', {
         childId: app.globalData.activeChildId,
         date,
-        includeDateExpenses: true
+        includeDateExpenses: true,
+        cacheTtl: 20000,
+        dedupe: true
       })
+      if (this.detailRequestId !== requestId) return
       const selectedTasks = []
       ;(detail.categories || []).forEach((category) => {
         category.tasks.forEach((task) => {

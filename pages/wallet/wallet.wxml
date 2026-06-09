@@ -42,7 +42,7 @@
     <view wx:if="{{wishes.length}}" class="wish-list">
       <view wx:for="{{wishes}}" wx:key="_id" wx:for-index="wishIndex" class="wish-card {{item.status === 'redeemed' ? 'done' : ''}} {{item.isComplete ? 'complete' : ''}}" data-id="{{item._id}}" data-index="{{wishIndex}}" bindtouchstart="onWishTouchStart" bindtouchend="onWishTouchEnd" bindtouchcancel="onWishTouchEnd">
         <view class="wish-image-wrap {{item.hasCustomImage ? 'custom' : ''}}" data-url="{{item.displayImage}}" catchtap="openWishImagePreview">
-          <image class="wish-theme-image" src="{{item.displayImage}}" mode="aspectFill"></image>
+          <image class="wish-theme-image" src="{{item.displayImage}}" mode="aspectFill" lazy-load></image>
           <view wx:if="{{item.hasCustomImage}}" class="wish-photo-label">照片</view>
         </view>
         <view class="wish-content">
@@ -64,7 +64,7 @@
       <view class="coin-input-row">
         <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{wishForm.costCoins}}" data-field="costCoins" bindinput="onWishInput" />
         <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage" aria-label="添加图片">
-          <image wx:if="{{wishForm.imageTempPath || wishForm.imageFileId}}" class="wish-photo-thumb" src="{{wishForm.imageTempPath || wishForm.imageFileId}}" mode="aspectFill"></image>
+          <image wx:if="{{wishForm.imageTempPath || wishForm.imageFileId}}" class="wish-photo-thumb" src="{{wishForm.imageTempPath || wishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
           <view wx:else class="camera-glyph">
             <view class="camera-top"></view>
             <view class="camera-body">
@@ -99,7 +99,7 @@
         <view class="coin-input-row">
           <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{editingWishForm.costCoins}}" data-field="costCoins" bindinput="onEditingWishInput" />
           <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage" aria-label="添加图片">
-            <image wx:if="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" class="wish-photo-thumb" src="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" mode="aspectFill"></image>
+            <image wx:if="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" class="wish-photo-thumb" src="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
             <view wx:else class="camera-glyph">
               <view class="camera-top"></view>
               <view class="camera-body">
@@ -119,7 +119,7 @@
 
   <view wx:if="{{wishImagePreviewVisible}}" class="image-preview-backdrop" catchtap="closeWishImagePreview">
     <view class="image-preview-panel" catchtap="noop">
-      <image class="image-preview-large" src="{{wishImagePreviewUrl}}" mode="aspectFit"></image>
+      <image class="image-preview-large" src="{{wishImagePreviewUrl}}" mode="aspectFit" lazy-load></image>
       <button class="image-preview-close" bindtap="closeWishImagePreview">关闭</button>
     </view>
   </view>
@@ -131,7 +131,7 @@
       <view class="coin-input-row">
         <input class="field coin-input" type="number" placeholder="花了多少金币" value="{{expenseForm.amount}}" data-field="amount" bindinput="onExpenseInput" />
         <button class="wish-photo-icon {{expenseForm.photoTempPath || expenseForm.photoFileId ? 'has-photo' : ''}}" bindtap="chooseExpensePhoto" aria-label="上传消费照片">
-          <image wx:if="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" class="wish-photo-thumb" src="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" mode="aspectFill"></image>
+          <image wx:if="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" class="wish-photo-thumb" src="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" mode="aspectFill" lazy-load></image>
           <view wx:else class="camera-glyph">
             <view class="camera-top"></view>
             <view class="camera-body">
@@ -162,7 +162,7 @@
       <view wx:for="{{expenses}}" wx:key="_id" class="tx-swipe" data-id="{{item._id}}" bindtouchstart="onExpenseTouchStart" bindtouchmove="onExpenseTouchMove" bindtouchend="onExpenseTouchEnd" bindtouchcancel="onExpenseTouchEnd">
         <view class="tx-delete-action" data-id="{{item._id}}" catchtap="openDeleteExpenseDialog">删除</view>
         <view class="card tx-card tx-card-slidable" style="transform: translateX(-{{item.swipeOffset}}px);" data-id="{{item._id}}" catchtap="handleExpenseCardTap">
-          <image wx:if="{{item.photoFileId}}" class="tx-photo" src="{{item.photoFileId}}" mode="aspectFill" data-url="{{item.photoFileId}}" catchtap="previewImage"></image>
+          <image wx:if="{{item.photoFileId}}" class="tx-photo" src="{{item.photoFileId}}" mode="aspectFill" lazy-load data-url="{{item.photoFileId}}" catchtap="previewImage"></image>
           <view class="tx-main">
             <view class="tx-title">{{item.itemName || item.reason}}</view>
             <view class="muted">{{item.date}}</view>
@@ -195,7 +195,7 @@
       <view class="group-title">{{item.name}}</view>
       <view class="exchange-grid">
         <view wx:for="{{item.items}}" wx:key="_id" wx:for-item="entry" class="exchange-card {{lastRedeemedExchangeId === entry._id ? 'redeemed' : ''}}" data-id="{{entry._id}}" bindlongpress="onExchangeLongPress">
-          <image class="exchange-theme-image" src="{{entry.themeIcon}}" mode="aspectFill"></image>
+          <image class="exchange-theme-image" src="{{entry.themeIcon}}" mode="aspectFill" lazy-load></image>
           <view class="exchange-body">
             <view class="exchange-name">{{entry.name}}</view>
             <view class="coin-pill">{{entry.costCoins}} 金币</view>
@@ -203,11 +203,11 @@
           </view>
           <view class="mini-actions">
             <button class="exchange-action-button edit {{entry.preset ? 'solo' : ''}}" data-id="{{entry._id}}" bindtap="editExchange">
-              <image class="exchange-action-icon" src="/assets/wish-icons/paint.png" mode="aspectFill"></image>
+              <image class="exchange-action-icon" src="/assets/wish-icons/paint.png" mode="aspectFill" lazy-load></image>
               <text>编辑</text>
             </button>
             <button wx:if="{{!entry.preset}}" class="exchange-action-button danger" data-id="{{entry._id}}" bindtap="deleteExchange">
-              <image class="exchange-action-icon" src="/assets/wish-icons/gift.png" mode="aspectFill"></image>
+              <image class="exchange-action-icon" src="/assets/wish-icons/gift.png" mode="aspectFill" lazy-load></image>
               <text>下架</text>
             </button>
           </view>
