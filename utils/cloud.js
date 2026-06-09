@@ -1,19 +1,74 @@
+const perf = require('./perf')
+
 function callCloud(name, data = {}) {
-  return wx.cloud.callFunction({ name, data }).then((res) => {
+  const {
+    cacheTtl = 0,
+    dedupe = false,
+    forceRefresh = false,
+    ...payload
+  } = data || {}
+  const cacheKey = cacheTtl || dedupe ? perf.makeCacheKey(name, payload) : ''
+  if (cacheTtl && !forceRefresh) {
+    const cached = perf.getCache(cacheKey, cacheTtl)
+    if (cached) return Promise.resolve(cached)
+  }
+  if (dedupe) {
+    const pending = perf.getPending(cacheKey)
+    if (pending) return pending
+  }
+  const request = wx.cloud.callFunction({ name, data: payload }).then((res) => {
     const result = res.result || {}
     if (result.ok === false) {
       throw new Error(result.message || '云函数调用失败')
     }
-    return result.data === undefined ? result : result.data
+    const value = result.data === undefined ? result : result.data
+    if (cacheTtl) perf.setCache(cacheKey, value)
+    return value
   })
+  if (dedupe) perf.setPending(cacheKey, request)
+  return request
 }
 
 function showError(error, fallback = '操作失败，请稍后再试') {
-  const message = error && error.message ? error.message : fallback
+  const rawMessage = error && error.message ? error.message : fallback
+  const message = rawMessage || fallback
+  if (isPinError(error)) {
+    showPinError()
+    return
+  }
   wx.showToast({
     title: message,
     icon: 'none',
     duration: 2200
+  })
+}
+
+function getErrorText(error) {
+  if (!error) return ''
+  if (typeof error === 'string') return error
+  return [
+    error.message,
+    error.errMsg,
+    error.stack
+  ].filter(Boolean).join(' ')
+}
+
+function isPinError(error) {
+  const message = getErrorText(error)
+  return message.includes('PIN 不正确') ||
+    message.includes('PIN不正确') ||
+    message.includes('PIN 输入错误') ||
+    message.includes('PIN码输入错误') ||
+    message.includes('家长 PIN 不正确') ||
+    message.includes('当前 PIN 不正确')
+}
+
+function showPinError() {
+  wx.showModal({
+    title: '验证失败',
+    content: 'PIN码输入错误，请重新输入',
+    showCancel: false,
+    confirmText: '知道了'
   })
 }
 
@@ -45,5 +100,9 @@ module.exports = {
   showError,
   formatDate,
   getWeekRange,
-  getMonthRange
+  getMonthRange,
+  isPinError,
+  showPinError,
+  clearCloudCache: perf.clearCache,
+  markPerf: perf.mark
 }

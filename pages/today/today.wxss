@@ -1,3 +1,47 @@
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26rpx;
+}
+
+.hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-avatar-button {
+  display: flex;
+  width: 132rpx;
+  height: 132rpx;
+  flex: 0 0 132rpx;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 5rpx solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #45c4b0, #53a7ff);
+  box-shadow: 0 12rpx 28rpx rgba(60, 39, 12, 0.16);
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.hero-avatar-button-hover {
+  transform: scale(0.95);
+  filter: brightness(0.98);
+}
+
+.hero-avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.hero-avatar-placeholder {
+  color: #fff;
+  font-size: 46rpx;
+  font-weight: 900;
+}
+
 .action-row {
   margin: 24rpx 0 8rpx;
 }
@@ -28,12 +72,7 @@
 }
 
 .task-card.checked {
-  opacity: 0.86;
-}
-
-.task-card.checked .task-content {
-  filter: grayscale(1);
-  opacity: 0.66;
+  opacity: 1;
 }
 
 .task-content {
@@ -50,7 +89,7 @@
   top: 18rpx;
   right: 18rpx;
   z-index: 2;
-  min-width: 60rpx;
+  min-width: 30rpx;
   min-height: 54rpx;
   align-items: center;
   justify-content: center;
@@ -64,7 +103,7 @@
   animation: resetPop 220ms ease both;
 }
 
-.reset-button:active {
+.reset-button-hover {
   transform: scale(0.94);
 }
 
@@ -93,54 +132,99 @@
   font-weight: 800;
 }
 
+/* 1. 按钮外层容器：修复原布局冲突，改为弹性布局，控制整体宽度/间距 */
 .task-actions {
   display: flex;
-  width: 100%;
   justify-content: center;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  column-gap: 40rpx;
   align-items: stretch;
+  column-gap: 0; /* 关键：取消两个按钮之间的间距，实现无缝连体 */
+  width: 100%;
+  margin-top: 10rpx;
 }
 
-.done-button,
-.miss-button {
+/* 2. 按钮公共基础样式：统一长条、字体、过渡，彻底抛弃圆形 */
+.checkin-icon-button {
+  /* 取消原有圆形宽高 */
+  width: auto;
+  height: 76rpx; /* 长条按钮高度，可自行微调 70~85rpx */
+  flex: 1; /* 两个按钮均分宽度 */
   display: flex;
-  width: 180rpx;
-
-  min-height: 65rpx;
   align-items: center;
   justify-content: center;
-  padding: 0 12rpx;
-  border-radius: 22rpx;
+  border: none; /* 取消原有边框 */
   font-size: 28rpx;
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1;
   white-space: nowrap;
-  box-shadow: 0 8rpx 18rpx rgba(60, 39, 12, 0.08);
-  transition: transform 120ms ease, filter 120ms ease;
+  box-shadow:  0 4rpx 12rpx rgba(0,0,0,0.06);
+
+  /* 统一过渡动画 */
+  transition: transform 120ms ease, filter 120ms ease, background 180ms ease;
 }
 
-.done-button:active,
-.miss-button:active {
-  transform: scale(0.96);
-  filter: brightness(0.98);
+/* ========== 核心：左右按钮单独设置圆角，实现连体效果 ========== */
+/* 左侧【完成】按钮：只保留 左上、左下 圆角 */
+.done-button {
+  font-size: 50rpx;
+  border-radius: 999rpx 0 0 999rpx;
+  background: #bbefde; /* 浅绿底色（常态） */
+  color: #2f8c72;
+}
+
+/* 右侧【未完成】按钮：只保留 右上、右下 圆角 */
+.miss-button {
+  border-radius: 0 999rpx 999rpx 0;
+  background: #f4e4e4; /* 浅红底色（常态） */
+  color: #d94444;
+}
+
+/* ========== 点击按压效果（保留原有交互手感） ========== */
+.miss-button-hover {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  background: #ff7373;
+  color: #ffffff;
+}
+.done-button-hover {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  background: #45c4b0;
+  color: #ffffff;
+}
+
+/* ========== 禁用状态（原有逻辑保留，灰化） ========== */
+.checkin-icon-button.selected {
+  transform: translateY(-2rpx);
+  box-shadow: 0 10rpx 24rpx rgba(60, 39, 12, 0.14);
+}
+
+.done-button.selected {
+  background: #45c4b0;
+  color: #ffffff;
+}
+
+.miss-button.selected {
+  background: #ff7373;
+  color: #ffffff;
+}
+
+.checkin-icon-button.muted {
+  opacity: 0.42;
+  box-shadow: none;
 }
 
 .done-button.disabled,
 .miss-button.disabled {
-  opacity: 0.65;
-  box-shadow: none;
+  pointer-events: none; /* 禁用后不可点击 */
 }
 
-.done-button {
-  color: #292302;
-  background: linear-gradient(135deg, #f0c61f, #ebe17d);
+/* .done-button {
+  background: transparent;
 }
 
 .miss-button {
-  color: #191818;
-  background: linear-gradient(135deg, #18b6e2, #9ee5ec);
-}
+  background: transparent;
+} */
 
 .celebration-layer,
 .encourage-layer {
@@ -187,40 +271,58 @@
 
 .encourage-layer {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 0 32rpx 210rpx;
+  padding: 32rpx;
+  pointer-events: auto;
+  background: rgba(55, 42, 23, 0.34);
 }
 
-.encourage-bubble {
-  max-width: 620rpx;
-  padding: 24rpx 30rpx;
-  border-radius: 999rpx;
-  color: #7a3b10;
-  font-size: 30rpx;
-  font-weight: 900;
+.encourage-dialog {
+  width: min(600rpx, 100%);
+  padding: 36rpx 32rpx 32rpx;
+  border-radius: 28rpx;
+  color: #493d31;
   text-align: center;
-  background: #fff0bd;
-  box-shadow: 0 14rpx 34rpx rgba(94, 62, 20, 0.14);
-  animation: encourageFloat 1500ms ease both;
+  background: #fffdf5;
+  box-shadow: 0 18rpx 50rpx rgba(60, 39, 12, 0.18);
+  animation: encourageDialogIn 240ms ease both;
 }
 
-@keyframes encourageFloat {
+.encourage-face {
+  font-size: 64rpx;
+  line-height: 1;
+}
+
+.encourage-title {
+  margin-top: 18rpx;
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.encourage-text {
+  margin-top: 12rpx;
+  color: #7e6c5c;
+  font-size: 26rpx;
+  line-height: 1.45;
+}
+
+.encourage-close {
+  margin-top: 28rpx;
+}
+
+@keyframes encourageDialogIn {
   0% {
     opacity: 0;
-    transform: translateY(80rpx) scale(0.92);
+    transform: translateY(28rpx) scale(0.94);
   }
-  18% {
+  70% {
     opacity: 1;
-    transform: translateY(0) scale(1.02);
-  }
-  78% {
-    opacity: 1;
-    transform: translateY(-18rpx) scale(1);
+    transform: translateY(-4rpx) scale(1.02);
   }
   100% {
-    opacity: 0;
-    transform: translateY(-38rpx) scale(0.98);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 

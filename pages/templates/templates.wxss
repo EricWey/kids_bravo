@@ -5,61 +5,58 @@
   margin-top: 24rpx;
 }
 
-.picker-field {
+.type-switch {
   display: flex;
-  align-items: center;
-}
-
-.gender-switch {
-  display: flex;
-  position: relative;
+  gap: 14rpx;
   padding: 8rpx;
   border-radius: 999rpx;
   background: #fff6d8;
 }
 
-.gender-switch button {
-  display: flex;
-  position: relative;
-  z-index: 1;
+.type-tab {
   flex: 1;
-  min-height: 70rpx;
+  min-height: 72rpx;
+  display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 999rpx;
   color: #7c6b55;
   font-size: 27rpx;
   font-weight: 900;
-  line-height: 1;
-  transition: color 240ms ease;
-}
-
-.gender-switch button::after {
-  border: 0;
-}
-
-.gender-switch .active {
-  color: #453010;
-}
-
-.gender-indicator {
-  position: absolute;
-  top: 8rpx;
-  bottom: 8rpx;
-  left: 8rpx;
-  width: calc((100% - 16rpx) / 2);
-  border-radius: 999rpx;
-  background: #ffca54;
-  box-shadow: 0 8rpx 18rpx rgba(255, 162, 61, 0.18);
   transition: transform 240ms ease;
 }
 
-.gender-indicator.right {
-  transform: translateX(100%);
+
+.type-tab.active {
+  color: #453010;
+  background: #ffca54;
+  box-shadow: 0 8rpx 18rpx rgba(255, 162, 61, 0.18);
+}
+
+.picker-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 76rpx;
+}
+.picker-value {
+  color: #2f8c72;
+  font-weight: 900;
 }
 
 .template-card {
   margin-top: 20rpx;
+}
+
+.empty-state {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 30rpx;
+  font-weight: 900;
+  margin-bottom: 10rpx;
 }
 
 .template-title {
@@ -90,4 +87,79 @@
   padding: 14rpx 0;
   border-bottom: 2rpx dashed #f1e0bf;
   font-size: 26rpx;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  padding: 48rpx;
+  background: rgba(43, 35, 25, 0.42);
+}
+
+.modal-mask.centered {
+  align-items: center;
+  justify-content: center;
+}
+
+.template-pin-mask {
+  z-index: 150;
+}
+
+.template-pin-modal {
+  width: 100%;
+  max-width: 640rpx;
+  padding: 30rpx;
+  border-radius: 28rpx;
+  background: #fffdf5;
+  box-shadow: 0 18rpx 50rpx rgba(60, 39, 12, 0.18);
+}
+
+.modal-title {
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.template-pin-hint {
+  margin-top: 12rpx;
+  line-height: 1.45;
+}
+
+.pin-input-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.pin-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.pin-toggle {
+  display: flex;
+  width: 108rpx;
+  min-height: 76rpx;
+  flex: 0 0 108rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: #306c80;
+  background: #dff7ff;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.template-pin-actions {
+  display: flex;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.template-pin-action-button {
+  min-width: 0;
 }

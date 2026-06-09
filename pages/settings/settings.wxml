@@ -8,13 +8,13 @@
   <view class="card form">
     <input class="field" password maxlength="4" type="number" placeholder="当前 PIN，首次可留空" value="{{oldPin}}" bindinput="onOldPin" />
     <input class="field" password maxlength="4" type="number" placeholder="新的 4 位 PIN" value="{{newPin}}" bindinput="onNewPin" />
-    <button class="primary-button" bindtap="savePin">保存 PIN</button>
+    <button class="primary-button" hover-class="button-hover" bindtap="savePin">保存 PIN</button>
   </view>
 
   <view class="section-title">快捷管理</view>
   <view class="grid-two">
-    <button class="secondary-button" bindtap="goTasks">任务管理</button>
-    <button class="secondary-button" bindtap="goTemplates">模板预览</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goTasks">任务管理</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goTemplates">模板预览</button>
   </view>
 
   <view class="section-title">隐私与安全</view>

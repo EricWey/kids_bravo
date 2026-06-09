@@ -24,34 +24,3 @@
   font-size: 29rpx;
   font-weight: 900;
 }
-
-.wish-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.wish-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-  margin-top: 18rpx;
-}
-
-.wish-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18rpx;
-}
-
-.wish-name {
-  font-size: 30rpx;
-  font-weight: 900;
-}
-
-.small {
-  min-width: 140rpx;
-  min-height: 66rpx;
-  font-size: 24rpx;
-}

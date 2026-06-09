@@ -27,6 +27,7 @@
 - `tasks`
 - `daily_records`
 - `coin_transactions`
+- `exchange_items`
 - `achievements`
 - `wish_items`
 - `parent_settings`

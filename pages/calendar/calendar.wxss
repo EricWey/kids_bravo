@@ -7,7 +7,7 @@
   background: #fff6d8;
 }
 
-.mode-switch button {
+.mode-button {
   display: flex;
   position: relative;
   z-index: 1;
@@ -23,7 +23,7 @@
   transition: color 240ms ease;
 }
 
-.mode-switch button::after {
+.mode-button::after {
   border: 0;
 }
 
@@ -54,7 +54,7 @@
   margin-bottom: 12rpx;
 }
 
-.weekday-row view {
+.weekday-label {
   min-height: 48rpx;
   color: #5d5144;
   font-size: 24rpx;
@@ -63,9 +63,30 @@
   text-align: center;
 }
 
+.calendar-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20rpx;
+}
+
+.calendar-track {
+  display: flex;
+  width: 300%;
+  will-change: transform;
+}
+
+.calendar-page {
+  position: relative;
+  flex: 0 0 33.3333%;
+  width: 33.3333%;
+  min-width: 0;
+}
+
 .calendar-grid {
   display: grid;
-  gap: 12rpx;
+  position: relative;
+  z-index: 1;
+  gap: 10rpx;
 }
 
 .calendar-grid.week {
@@ -78,6 +99,7 @@
 
 .day-cell {
   display: flex;
+  position: relative;
   min-height: 104rpx;
   flex-direction: column;
   align-items: center;
@@ -92,6 +114,12 @@
   color: #b8ab97;
   background: rgba(255, 255, 255, 0.58);
   border-color: #f2ead8;
+}
+
+.day-cell.placeholder {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .day-cell.today {
@@ -119,6 +147,36 @@
   height: 28rpx;
 }
 
+.coin-zero {
+  color: #9a9286;
+}
+
+.expense-dot {
+  position: absolute;
+  right: 6rpx;
+  bottom: 6rpx;
+  min-height: 30rpx;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  color: #8c3d17;
+  background: #ffd6c3;
+  font-size: 18rpx;
+  font-weight: 900;
+  line-height: 30rpx;
+}
+
+.month-watermark {
+  position: absolute;
+  right: 24rpx;
+  bottom: 10rpx;
+  z-index: 0;
+  color: rgba(138, 122, 101, 0.13);
+  font-size: 176rpx;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
 .detail-list {
   display: flex;
   flex-direction: column;
@@ -134,4 +192,8 @@
 .task-name {
   font-size: 29rpx;
   font-weight: 900;
+}
+
+.expense-card {
+  border-color: #ffe0d2;
 }

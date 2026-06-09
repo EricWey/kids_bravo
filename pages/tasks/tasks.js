@@ -1,5 +1,6 @@
 const app = getApp()
 const { callCloud, showError, formatDate } = require('../../utils/cloud')
+const taskStatus = require('../../utils/taskStatus')
 
 const CATEGORIES = ['学习成长类', '生活习惯类', '行为品德类']
 
@@ -9,13 +10,42 @@ Page({
     unlocked: false,
     tasks: [],
     categoryNames: CATEGORIES,
-    saving: false
+    saving: false,
+    showAddModal: false,
+    newTaskCategoryIndex: 0,
+    newTaskForm: {
+      category: CATEGORIES[0],
+      name: '',
+      description: '',
+      rewardCoins: 2,
+      penaltyCoins: 1
+    }
+  },
+
+  onLoad() {
+    this.taskDrafts = {}
+    this.newTaskDraft = {}
+    this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.handleTaskStatusChange(change))
+  },
+
+  onUnload() {
+    if (this.unsubscribeTaskStatus) {
+      this.unsubscribeTaskStatus()
+      this.unsubscribeTaskStatus = null
+    }
   },
 
   onShow() {
     if (this.data.unlocked) {
       this.loadTasks()
     }
+  },
+
+  handleTaskStatusChange(change) {
+    if (!change || change.childId !== app.globalData.activeChildId) return
+    const index = this.data.tasks.findIndex((task) => task._id === change.taskId)
+    if (index < 0) return
+    this.setData({ [`tasks[${index}].enabled`]: change.enabled !== false })
   },
 
   onPinInput(event) {
@@ -50,33 +80,102 @@ Page({
       includeDisabled: true
     })
     const tasks = []
+    const categoryNames = CATEGORIES.slice()
     ;(detail.categories || []).forEach((category) => {
+      if (category.name && !categoryNames.includes(category.name)) {
+        categoryNames.push(category.name)
+      }
       category.tasks.forEach((task) => {
         tasks.push({
           ...task,
           category: category.name,
-          categoryIndex: CATEGORIES.indexOf(category.name),
+          categoryIndex: categoryNames.indexOf(category.name),
           enabled: task.enabled !== false
         })
       })
     })
-    this.setData({ tasks })
+    this.setData({
+      categoryNames,
+      tasks: taskStatus.applyTaskStatusList(tasks, app.globalData.activeChildId)
+    })
   },
 
   addTask() {
+    const category = this.data.categoryNames[0] || CATEGORIES[0]
+    this.newTaskDraft = {
+      category,
+      name: '',
+      description: '',
+      rewardCoins: 2,
+      penaltyCoins: 1
+    }
     this.setData({
-      tasks: this.data.tasks.concat({
+      showAddModal: true,
+      newTaskCategoryIndex: 0,
+      newTaskForm: this.newTaskDraft
+    })
+  },
+
+  closeAddModal() {
+    this.newTaskDraft = {}
+    this.setData({ showAddModal: false })
+  },
+
+  noop() {},
+
+  onNewTaskCategoryChange(event) {
+    const categoryIndex = Number(event.detail.value)
+    const category = this.data.categoryNames[categoryIndex]
+    this.newTaskDraft = {
+      ...(this.newTaskDraft || this.data.newTaskForm),
+      category
+    }
+    this.setData({
+      newTaskCategoryIndex: categoryIndex,
+      'newTaskForm.category': category
+    })
+  },
+
+  onNewTaskInput(event) {
+    const field = event.currentTarget.dataset.field
+    this.newTaskDraft = {
+      ...(this.newTaskDraft || this.data.newTaskForm),
+      [field]: event.detail.value
+    }
+  },
+
+  onNewTaskBlur(event) {
+    const field = event.currentTarget.dataset.field
+    if (!field || !this.newTaskDraft) return
+    this.setData({ [`newTaskForm.${field}`]: this.newTaskDraft[field] })
+  },
+
+  submitNewTask() {
+    const form = {
+      ...this.data.newTaskForm,
+      ...(this.newTaskDraft || {})
+    }
+    const name = String(form.name || '').trim()
+    if (!name) {
+      wx.showToast({ title: '请填写事项名称', icon: 'none' })
+      return
+    }
+
+    this.setData({
+      tasks: [{
         _id: `local_${Date.now()}`,
-        category: CATEGORIES[0],
-        categoryIndex: 0,
-        name: '',
-        description: '',
-        rewardCoins: 2,
-        penaltyCoins: 1,
+        category: form.category,
+        categoryIndex: this.data.newTaskCategoryIndex,
+        name,
+        description: String(form.description || '').trim(),
+        rewardCoins: Number(form.rewardCoins) || 0,
+        penaltyCoins: Number(form.penaltyCoins) || 0,
         enabled: true,
         isNew: true
-      })
+      }].concat(this.data.tasks),
+      showAddModal: false
     })
+    this.newTaskDraft = {}
   },
 
   onCategoryChange(event) {
@@ -84,13 +183,26 @@ Page({
     const categoryIndex = Number(event.detail.value)
     this.setData({
       [`tasks[${index}].categoryIndex`]: categoryIndex,
-      [`tasks[${index}].category`]: CATEGORIES[categoryIndex]
+      [`tasks[${index}].category`]: this.data.categoryNames[categoryIndex]
     })
   },
 
   onInput(event) {
     const { index, field } = event.currentTarget.dataset
-    this.setData({ [`tasks[${index}].${field}`]: event.detail.value })
+    if (index === undefined || !field) return
+    const key = String(index)
+    this.taskDrafts[key] = {
+      ...(this.taskDrafts[key] || {}),
+      [field]: event.detail.value
+    }
+  },
+
+  onInputBlur(event) {
+    const { index, field } = event.currentTarget.dataset
+    if (index === undefined || !field) return
+    const draft = this.taskDrafts[String(index)]
+    if (!draft || !Object.prototype.hasOwnProperty.call(draft, field)) return
+    this.setData({ [`tasks[${index}].${field}`]: draft[field] })
   },
 
   onEnabledChange(event) {
@@ -102,11 +214,15 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const tasks = this.data.tasks.slice()
     tasks.splice(index, 1)
+    this.taskDrafts = {}
     this.setData({ tasks })
   },
 
   async save() {
-    const tasks = this.data.tasks.map((task) => ({
+    const tasks = this.data.tasks.map((task, index) => ({
+      ...task,
+      ...(this.taskDrafts[String(index)] || {})
+    })).map((task) => ({
       _id: task.isNew ? '' : task._id,
       category: task.category,
       name: task.name.trim(),
@@ -122,6 +238,15 @@ Page({
         childId: app.globalData.activeChildId,
         pin: this.data.pin,
         tasks
+      })
+      tasks.forEach((task) => {
+        if (task._id) {
+          taskStatus.publishTaskStatus({
+            childId: app.globalData.activeChildId,
+            taskId: task._id,
+            enabled: task.enabled
+          })
+        }
       })
       this.setData({ saving: false })
       wx.showToast({ title: '任务已保存', icon: 'success' })

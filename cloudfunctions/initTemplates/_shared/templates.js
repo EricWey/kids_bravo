@@ -18,37 +18,82 @@ const BASE_TASKS = {
   ]
 }
 
-function genderName(gender) {
-  return gender === 'boy' ? '男孩' : '女孩'
+function normalizeCategoryTask(task = {}) {
+  return {
+    name: task.taskName || task.name || task.title || task.taskTitle || '',
+    description: task.description || '',
+    rewardCoins: Math.max(0, Number(task.rewardCoins) || 0),
+    penaltyCoins: Math.max(0, Number(task.penaltyCoins) || 0)
+  }
 }
 
-function getTemplateSeed(age, gender) {
-  const tone = age <= 5 ? '萌芽' : age <= 8 ? '探索' : '进阶'
-  const multiplier = age <= 5 ? 1 : age <= 8 ? 1.2 : 1.4
-  const categories = CATEGORIES.map((name) => ({
-    name,
-    tasks: BASE_TASKS[name].map(([taskName, description, reward, penalty]) => ({
-      name: taskName,
-      description,
-      rewardCoins: Math.round(reward * multiplier),
-      penaltyCoins: Math.max(1, Math.round(penalty * multiplier))
-    }))
-  }))
-
-  return {
-    key: `${age}_${gender}_${tone}`,
-    name: `${age}岁${genderName(gender)}${tone}成长模板`,
-    age,
-    gender,
-    categories
+function toList(value) {
+  if (Array.isArray(value)) return value
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => value[key])
   }
+  return []
+}
+
+function normalizeCategory(category = {}, categoryIndex = 0) {
+  return {
+    name: category.name || category.category || CATEGORIES[categoryIndex] || '未分类',
+    tasks: toList(category.tasks).map((task) => normalizeCategoryTask(task))
+  }
+}
+
+function flattenCategoryEntries(category = {}, categoryIndex = 0) {
+  const entries = [normalizeCategory(category, categoryIndex)]
+  Object.keys(category || {}).forEach((key) => {
+    if (key === 'name' || key === 'category' || key === 'tasks') return
+    const value = category[key]
+    if (value && typeof value === 'object' && (value.name || value.category || value.tasks)) {
+      entries.push(normalizeCategory(value, Number(key) || entries.length))
+    }
+  })
+  return entries
+}
+
+function normalizeTemplateCategories(template = {}) {
+  const categories = toList(template.categories)
+  if (categories.length) {
+    return categories.reduce((list, category, categoryIndex) => (
+      list.concat(flattenCategoryEntries(category, categoryIndex))
+    ), [])
+  }
+
+  if (Array.isArray(template.tasks)) {
+    const grouped = {}
+    template.tasks.forEach((task) => {
+      const categoryName = task.category || task.categoryName || '未分类'
+      if (!grouped[categoryName]) grouped[categoryName] = []
+      grouped[categoryName].push(normalizeCategoryTask(task))
+    })
+    return Object.keys(grouped).map((name) => ({
+      name,
+      tasks: grouped[name]
+    }))
+  }
+
+  const singleTask = normalizeCategoryTask(template)
+  if (singleTask.name) {
+    return [{
+      name: template.category || template.taskCategory || '未分类',
+      tasks: [singleTask]
+    }]
+  }
+
+  return []
 }
 
 function flattenTemplateTasks(template, childId, ownerOpenid) {
   const now = new Date()
   const tasks = []
-  template.categories.forEach((category) => {
+  normalizeTemplateCategories(template).forEach((category) => {
     category.tasks.forEach((task, order) => {
+      if (!task.name) return
       tasks.push({
         childId,
         ownerOpenid,
@@ -69,6 +114,6 @@ function flattenTemplateTasks(template, childId, ownerOpenid) {
 
 module.exports = {
   CATEGORIES,
-  getTemplateSeed,
-  flattenTemplateTasks
+  flattenTemplateTasks,
+  normalizeTemplateCategories
 }

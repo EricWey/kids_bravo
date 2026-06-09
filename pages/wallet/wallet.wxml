@@ -1,26 +1,286 @@
-<view class="page">
-  <view class="hero">
-    <view class="hero-title">金币账本</view>
-    <view class="hero-subtitle">累计 {{totalCoins}} 金币 · 连续 {{streakDays}} 天</view>
+<view class="page wallet-page" bindtap="dismissWalletSwipe">
+  <view class="hero wallet-hero">
+    <view>
+      <view class="hero-title">金币小商店</view>
+      <view class="hero-subtitle">现在有 {{totalCoins}} 金币 · 连续 {{streakDays}} 天闪闪发光</view>
+    </view>
+    <view class="coin-badge {{coinSpinVisible ? 'coin-badge-pop' : ''}} {{totalCoins < 0 ? 'negative' : ''}}">{{totalCoins}}</view>
   </view>
 
-  <view class="section-title">成长轨迹</view>
+  <view class="section-title">本周金币轨迹</view>
+  <view class="trend-legend">
+    <view class="legend-item"><view class="legend-dot income"></view><text>收入</text></view>
+    <view class="legend-item"><view class="legend-dot expense"></view><text>消费</text></view>
+    <view class="legend-item"><view class="legend-pill">总</view><text>累计</text></view>
+  </view>
   <view class="card chart">
     <view wx:for="{{trend}}" wx:key="date" class="bar-wrap">
-      <view class="bar {{item.total >= 0 ? 'positive' : 'negative'}}" style="height: {{item.height}}rpx;"></view>
+      <view class="cumulative-label">{{item.cumulativeText}}</view>
+      <view class="bar-pair">
+        <view class="bar-slot">
+          <view wx:if="{{item.incomeText}}" class="bar-value income-value">{{item.incomeText}}</view>
+          <view wx:if="{{item.incomeHeight}}" class="bar income-bar {{item.incomeAmount >= 0 ? 'positive' : 'negative'}}" style="height: {{item.incomeHeight}}rpx;"></view>
+        </view>
+        <view class="bar-slot">
+          <view wx:if="{{item.expenseText}}" class="bar-value expense-value">{{item.expenseText}}</view>
+          <view wx:if="{{item.expenseHeight}}" class="bar expense-bar" style="height: {{item.expenseHeight}}rpx;"></view>
+        </view>
+      </view>
       <text>{{item.label}}</text>
     </view>
   </view>
 
-  <view class="section-title">金币流水</view>
-  <view wx:if="{{transactions.length}}" class="tx-list">
-    <view wx:for="{{transactions}}" wx:key="_id" class="card tx-card">
-      <view>
-        <view class="tx-title">{{item.taskName || item.reason}}</view>
-        <view class="muted">{{item.date}} · {{item.typeText}}</view>
+  <view class="module-tabs">
+    <view class="module-indicator pos-{{activeModuleIndex}}"></view>
+    <button wx:for="{{modules}}" wx:key="key" class="module-tab {{activeModule === item.key ? 'active' : ''}}" data-module="{{item.key}}" bindtap="switchModule">
+      <text class="module-tab-text">{{item.label}}</text>
+    </button>
+  </view>
+
+  <view wx:if="{{activeModule === 'wishes'}}" class="module-panel">
+    <view class="section-title">愿望清单</view>
+    <view wx:if="{{wishes.length}}" class="wish-list">
+      <view wx:for="{{wishes}}" wx:key="_id" wx:for-index="wishIndex" class="wish-card {{item.status === 'redeemed' ? 'done' : ''}} {{item.isComplete ? 'complete' : ''}}" data-id="{{item._id}}" data-index="{{wishIndex}}" bindtouchstart="onWishTouchStart" bindtouchend="onWishTouchEnd" bindtouchcancel="onWishTouchEnd">
+        <view class="wish-image-wrap {{item.hasCustomImage ? 'custom' : ''}}" data-url="{{item.displayImage}}" catchtap="openWishImagePreview">
+          <image class="wish-theme-image" src="{{item.displayImage}}" mode="aspectFill" lazy-load></image>
+          <view wx:if="{{item.hasCustomImage}}" class="wish-photo-label">照片</view>
+        </view>
+        <view class="wish-content">
+          <view class="wish-name">{{item.name}}</view>
+          <view class="coin-pill">{{item.costCoins}} 金币</view>
+          <view class="progress-text">{{item.statusLine}}</view>
+        </view>
+        <view class="progress-ring {{item.progressClass}} {{item.isComplete ? 'complete' : ''}}">
+          <text wx:if="{{item.isComplete}}" class="progress-check">✓</text>
+          <text wx:else class="progress-percent">{{item.progressDisplay}}</text>
+        </view>
       </view>
-      <view class="{{item.amount >= 0 ? 'coin-plus' : 'coin-minus'}}">{{item.amount >= 0 ? '+' : ''}}{{item.amount}}</view>
+    </view>
+    <view wx:else class="card empty">先许下第一个小愿望吧。</view>
+
+    <view class="section-title add-wish-title">添加愿望</view>
+    <view class="card form-card">
+      <input class="field" placeholder="愿望名称，例如：滑板车" value="{{wishForm.name}}" data-field="name" bindinput="onWishInput" />
+      <view class="coin-input-row">
+        <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{wishForm.costCoins}}" data-field="costCoins" bindinput="onWishInput" />
+        <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage">
+          <image wx:if="{{wishForm.imageTempPath || wishForm.imageFileId}}" class="wish-photo-thumb" src="{{wishForm.imageTempPath || wishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
+          <view wx:else class="camera-glyph">
+            <view class="camera-top"></view>
+            <view class="camera-body">
+              <view class="camera-lens"></view>
+            </view>
+          </view>
+        </button>
+      </view>
+      <view class="image-helper-text">{{wishForm.imageTempPath || wishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
+      <view class="form-actions">
+        <button class="secondary-button" wx:if="{{wishForm.wishId}}" hover-class="button-hover" bindtap="resetWishForm">取消编辑</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{savingWish}}" bindtap="saveWish">{{wishForm.wishId ? '保存愿望' : '加入清单'}}</button>
+      </view>
+    </view>
+
+    <view wx:if="{{wishActionMenuVisible}}" class="modal-backdrop wish-action-backdrop" catchtap="closeWishActionMenu">
+      <view class="edit-modal wish-action-modal" catchtap="noop">
+        <view class="wish-action-icon">愿</view>
+        <view class="edit-title">愿望操作</view>
+        <view class="wish-action-name">{{activeWishName}}</view>
+        <view class="wish-action-actions">
+          <button class="secondary-button wish-action-button" hover-class="button-hover" bindtap="openEditWishDialog">编辑</button>
+          <button class="danger-button wish-action-button" hover-class="button-hover" bindtap="confirmDeleteActiveWish">删除</button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{editingWishVisible}}" class="modal-backdrop" catchtap="closeEditWishDialog">
+      <view class="edit-modal" catchtap="noop">
+        <view class="edit-title">编辑愿望</view>
+        <input class="field" placeholder="愿望名称" value="{{editingWishForm.name}}" data-field="name" bindinput="onEditingWishInput" />
+        <view class="coin-input-row">
+          <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{editingWishForm.costCoins}}" data-field="costCoins" bindinput="onEditingWishInput" />
+          <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage">
+            <image wx:if="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" class="wish-photo-thumb" src="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
+            <view wx:else class="camera-glyph">
+              <view class="camera-top"></view>
+              <view class="camera-body">
+                <view class="camera-lens"></view>
+              </view>
+            </view>
+          </button>
+        </view>
+        <view class="image-helper-text">{{editingWishForm.imageTempPath || editingWishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
+        <view class="form-actions">
+          <button class="secondary-button" hover-class="button-hover" bindtap="closeEditWishDialog">取消</button>
+          <button class="primary-button" hover-class="button-hover" loading="{{savingWish}}" bindtap="saveEditingWish">保存</button>
+        </view>
+      </view>
     </view>
   </view>
-  <view wx:else class="card empty">还没有金币流水。</view>
+
+  <view wx:if="{{wishImagePreviewVisible}}" class="image-preview-backdrop" catchtap="closeWishImagePreview">
+    <view class="image-preview-panel" catchtap="noop">
+      <image class="image-preview-large" src="{{wishImagePreviewUrl}}" mode="aspectFit" lazy-load></image>
+      <button class="image-preview-close" bindtap="closeWishImagePreview">关闭</button>
+    </view>
+  </view>
+
+  <view wx:if="{{activeModule === 'ledger'}}" class="module-panel">
+    <view class="section-title">金币账本</view>
+    <view class="card form-card">
+      <input class="field" placeholder="购买了什么" value="{{expenseForm.itemName}}" data-field="itemName" bindinput="onExpenseInput" />
+      <view class="coin-input-row">
+        <input class="field coin-input" type="number" placeholder="花了多少金币" value="{{expenseForm.amount}}" data-field="amount" bindinput="onExpenseInput" />
+        <button class="wish-photo-icon {{expenseForm.photoTempPath || expenseForm.photoFileId ? 'has-photo' : ''}}" bindtap="chooseExpensePhoto">
+          <image wx:if="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" class="wish-photo-thumb" src="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" mode="aspectFill" lazy-load></image>
+          <view wx:else class="camera-glyph">
+            <view class="camera-top"></view>
+            <view class="camera-body">
+              <view class="camera-lens"></view>
+            </view>
+          </view>
+        </button>
+      </view>
+      <view wx:if="{{expenseAmountError}}" class="field-error">{{expenseAmountError}}</view>
+      <picker mode="date" value="{{expenseForm.date}}" bindchange="onExpenseDateChange">
+        <view class="field picker-field">消费时间：{{expenseForm.date}}</view>
+      </picker>
+      <button class="primary-button" hover-class="button-hover" loading="{{savingExpense}}" bindtap="saveExpense">记录支出</button>
+    </view>
+
+    <view class="filter-row">
+      <picker mode="date" value="{{ledgerStart}}" end="{{ledgerPickerMax}}" bindchange="onLedgerStartChange">
+        <view class="filter-chip">{{ledgerStart || '开始日期'}}</view>
+      </picker>
+      <picker mode="date" value="{{ledgerEnd}}" end="{{ledgerPickerMax}}" bindchange="onLedgerEndChange">
+        <view class="filter-chip">{{ledgerEnd || '结束日期'}}</view>
+      </picker>
+      <button class="filter-clear" loading="{{loadingLedger}}" bindtap="clearLedgerFilter">近7天</button>
+    </view>
+    <view wx:if="{{loadingLedger}}" class="ledger-loading">正在更新账本...</view>
+
+    <view wx:if="{{expenses.length}}" class="tx-list">
+      <view wx:for="{{expenses}}" wx:key="_id" class="tx-swipe" data-id="{{item._id}}" bindtouchstart="onExpenseTouchStart" bindtouchmove="onExpenseTouchMove" bindtouchend="onExpenseTouchEnd" bindtouchcancel="onExpenseTouchEnd">
+        <view class="tx-delete-action" data-id="{{item._id}}" catchtap="openDeleteExpenseDialog">删除</view>
+        <view class="card tx-card tx-card-slidable" style="transform: translateX(-{{item.swipeOffset}}px);" data-id="{{item._id}}" catchtap="handleExpenseCardTap">
+          <image wx:if="{{item.photoFileId}}" class="tx-photo" src="{{item.photoFileId}}" mode="aspectFill" lazy-load data-url="{{item.photoFileId}}" catchtap="previewImage"></image>
+          <view class="tx-main">
+            <view class="tx-title">{{item.itemName || item.reason}}</view>
+            <view class="muted">{{item.date}}</view>
+          </view>
+          <view class="coin-minus">{{item.amount}}</view>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="card empty">这个时间段还没有消费记录。</view>
+
+    <view wx:if="{{deleteExpenseDialogVisible}}" class="modal-backdrop delete-expense-backdrop" catchtap="closeDeleteExpenseDialog">
+      <view class="edit-modal delete-expense-modal" catchtap="noop">
+        <view class="edit-title">家长验证</view>
+        <view class="delete-expense-tip">删除消费记录需要家长 PIN。</view>
+        <view class="pin-input-row">
+          <input wx:if="{{!deleteExpensePinVisible}}" class="field pin-field" password placeholder="输入家长 PIN" value="{{deleteExpensePin}}" bindinput="onDeleteExpensePinInput" />
+          <input wx:else class="field pin-field" placeholder="输入家长 PIN" value="{{deleteExpensePin}}" bindinput="onDeleteExpensePinInput" />
+          <button class="pin-toggle" bindtap="toggleDeleteExpensePinVisible">{{deleteExpensePinVisible ? '隐藏' : '显示'}}</button>
+        </view>
+        <view class="exchange-confirm-actions">
+          <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeDeleteExpenseDialog">取消</button>
+          <button class="danger-button exchange-confirm-button" hover-class="button-hover" loading="{{deletingExpense}}" bindtap="confirmDeleteExpenseAuth">确认</button>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{activeModule === 'exchange'}}" class="module-panel">
+    <view wx:for="{{exchangeGroups}}" wx:key="name" class="exchange-group">
+      <view class="group-title">{{item.name}}</view>
+      <view class="exchange-grid">
+        <view wx:for="{{item.items}}" wx:key="_id" wx:for-item="entry" class="exchange-card {{lastRedeemedExchangeId === entry._id ? 'redeemed' : ''}}" data-id="{{entry._id}}" bindlongpress="onExchangeLongPress">
+          <image class="exchange-theme-image" src="{{entry.themeIcon}}" mode="aspectFill" lazy-load></image>
+          <view class="exchange-body">
+            <view class="exchange-name">{{entry.name}}</view>
+            <view class="coin-pill">{{entry.costCoins}} 金币</view>
+            <view class="exchange-desc">{{entry.description}}</view>
+          </view>
+          <view class="mini-actions">
+            <button class="exchange-action-button edit {{entry.preset ? 'solo' : ''}}" hover-class="exchange-action-button-hover" data-id="{{entry._id}}" bindtap="editExchange">
+              <image class="exchange-action-icon" src="/assets/wish-icons/paint.png" mode="aspectFill" lazy-load></image>
+              <text>编辑</text>
+            </button>
+            <button wx:if="{{!entry.preset}}" class="exchange-action-button danger" hover-class="exchange-action-button-hover" data-id="{{entry._id}}" bindtap="deleteExchange">
+              <image class="exchange-action-icon" src="/assets/wish-icons/gift.png" mode="aspectFill" lazy-load></image>
+              <text>下架</text>
+            </button>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-title exchange-manage-title">兑换物品管理</view>
+    <view class="card form-card">
+      <input class="field" placeholder="物品或体验名称" value="{{exchangeForm.name}}" data-field="name" bindinput="onExchangeInput" />
+      <input class="field" type="number" placeholder="所需金币" value="{{exchangeForm.costCoins}}" data-field="costCoins" bindinput="onExchangeInput" />
+      <picker value="{{exchangeCategoryIndex}}" range="{{exchangeCategories}}" bindchange="onExchangeCategoryChange">
+        <view class="field picker-field">分类：{{exchangeForm.category}}</view>
+      </picker>
+      <textarea class="field textarea" placeholder="简短描述" value="{{exchangeForm.description}}" data-field="description" bindinput="onExchangeInput"></textarea>
+      <view class="form-actions">
+        <button class="primary-button" hover-class="button-hover" loading="{{savingExchange}}" bindtap="saveExchangeItem">上架兑换项</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{exchangeEditVisible}}" class="modal-backdrop exchange-edit-backdrop" catchtap="closeExchangeEditDialog">
+    <view class="edit-modal exchange-edit-modal" catchtap="noop">
+      <view class="edit-title">编辑兑换项</view>
+      <input class="field" placeholder="物品或体验名称" value="{{exchangeEditForm.name}}" data-field="name" bindinput="onExchangeEditInput" />
+      <input class="field" type="number" placeholder="所需金币" value="{{exchangeEditForm.costCoins}}" data-field="costCoins" bindinput="onExchangeEditInput" />
+      <picker value="{{exchangeEditCategoryIndex}}" range="{{exchangeCategories}}" bindchange="onExchangeEditCategoryChange">
+        <view class="field picker-field">分类：{{exchangeEditForm.category}}</view>
+      </picker>
+      <textarea class="field textarea" placeholder="简短描述" value="{{exchangeEditForm.description}}" data-field="description" bindinput="onExchangeEditInput"></textarea>
+      <view class="form-actions">
+        <button class="secondary-button" hover-class="button-hover" bindtap="closeExchangeEditDialog">取消</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{savingExchange}}" bindtap="saveExchangeEditItem">保存</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{exchangeEditAuthVisible}}" class="modal-backdrop delete-expense-backdrop" catchtap="closeExchangeEditAuth">
+    <view class="edit-modal delete-expense-modal" catchtap="noop">
+      <view class="edit-title">家长验证</view>
+      <view class="delete-expense-tip">编辑兑换物品需要家长 PIN。</view>
+      <view class="pin-input-row">
+        <input wx:if="{{!exchangeEditPinVisible}}" class="field pin-field" password placeholder="输入家长 PIN" value="{{exchangeEditPin}}" bindinput="onExchangeEditPinInput" />
+        <input wx:else class="field pin-field" placeholder="输入家长 PIN" value="{{exchangeEditPin}}" bindinput="onExchangeEditPinInput" />
+        <button class="pin-toggle" bindtap="toggleExchangeEditPinVisible">{{exchangeEditPinVisible ? '隐藏' : '显示'}}</button>
+      </view>
+      <view class="exchange-confirm-actions">
+        <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeExchangeEditAuth">取消</button>
+        <button class="primary-button exchange-confirm-button" hover-class="button-hover" loading="{{verifyingExchangeEdit}}" bindtap="confirmExchangeEditAuth">确认</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{exchangeConfirmVisible}}" class="modal-backdrop exchange-confirm-backdrop" catchtap="closeExchangeConfirm">
+    <view class="edit-modal exchange-confirm-modal" catchtap="noop">
+      <view class="exchange-confirm-icon">兑</view>
+      <view class="edit-title">确认兑换</view>
+      <view class="exchange-confirm-name">{{activeExchangeItem.name}}</view>
+      <view class="exchange-confirm-cost">需要 {{activeExchangeItem.costCoins}} 金币</view>
+      <view class="exchange-confirm-tip">确认后会从当前金币余额中扣除。</view>
+      <view class="exchange-confirm-actions">
+        <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeExchangeConfirm">取消</button>
+        <button class="primary-button exchange-confirm-button" hover-class="button-hover" loading="{{coinAnimating}}" bindtap="confirmExchangeRedeem">确认</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{coinSpinVisible}}" class="coin-spin-layer">
+    <view class="coin-spin-card">
+      <view class="spinning-coin">金</view>
+      <view class="coin-delta">-{{coinDelta}}</view>
+    </view>
+  </view>
+
+  <canvas canvas-id="walletImageCanvas" class="hidden-canvas"></canvas>
 </view>

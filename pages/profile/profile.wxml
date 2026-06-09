@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page" bindtap="dismissProfileSwipe">
   <view class="hero">
     <view class="hero-title">Bravo 星球</view>
     <view class="hero-subtitle">今天就把好习惯变成闪亮金币！</view>
@@ -8,25 +8,25 @@
     <view class="profile-section-title">小朋友档案</view>
 
     <view class="profile-actions">
-      <button class="icon-hit refresh-button" aria-label="刷新档案" bindtap="reload">
+      <button class="icon-hit refresh-button" hover-class="icon-hit-hover" bindtap="reload">
         <text class="icon-dot">↻</text>
       </button>
-      <button class="icon-hit add-profile-button" aria-label="新增档案" bindtap="openCreateModal">
+      <button class="icon-hit add-profile-button" hover-class="icon-hit-hover" bindtap="openCreateModal">
         <text class="icon-dot">+</text>
       </button>
     </view>
 
     <view wx:if="{{children.length}}" class="child-list">
       <view wx:for="{{children}}" wx:key="_id" class="swipe-row">
-        <view class="delete-action" data-id="{{item._id}}" data-name="{{item.nickname}}" bindtap="confirmDelete">删除</view>
+        <view class="delete-action" data-id="{{item._id}}" data-name="{{item.nickname}}" catchtap="confirmDelete">删除</view>
         <view class="card child-card {{activeChildId === item._id ? 'active' : ''}}" style="transform: translateX({{item.offsetX}}px);" data-id="{{item._id}}" data-index="{{index}}" bindtap="selectChild" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
           <view class="child-avatar" catchtap="chooseAvatar" data-id="{{item._id}}">
-            <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill"></image>
-            <text wx:else>{{item.gender === 'girl' ? '花' : '星'}}</text>
+            <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load></image>
+            <text wx:else>{{item.avatarPlaceholder}}</text>
           </view>
           <view class="child-info">
             <view class="child-name">{{item.nickname}}</view>
-            <view class="muted">{{item.age}} 岁 · {{item.genderText}} · {{item.templateName || '成长'}}</view>
+            <view class="muted">{{item.templateTypeText ? item.templateTypeText + ' · ' : ''}}{{item.templateName || '未设置模板'}}</view>
             <view class="avatar-hint">点击头像可上传照片</view>
           </view>
           <button wx:if="{{activeChildId === item._id}}" class="card-action detail-button" hover-class="card-action-hover" catchtap="showTaskDetail" data-id="{{item._id}}" data-name="{{item.nickname}}">任务详情</button>
@@ -39,64 +39,83 @@
   </view>
 
   <view class="quick-actions grid-two">
-    <button class="secondary-button" bindtap="goTemplates">模板预览</button>
-    <button class="secondary-button" bindtap="goSettings">家长设置</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goTemplates">模板预览</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goSettings">家长设置</button>
   </view>
 
   <view wx:if="{{showCreateModal}}" class="modal-mask centered" catchtap="closeCreateModal">
     <view class="profile-modal bounce-in" catchtap="noop">
-      <view class="modal-title">新增档案</view>
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeCreateModal">×</button>
+      <view class="modal-header simple-header">
+        <view class="modal-title">新增档案</view>
+      </view>
       <view class="form">
         <view class="field-group">
           <view class="field-label">昵称</view>
           <input class="field" maxlength="12" placeholder="可填写昵称" value="{{form.nickname}}" bindinput="onNameInput" />
         </view>
         <view class="field-group">
-          <view class="field-label">年龄</view>
-          <picker mode="selector" range="{{ages}}" value="{{ageIndex}}" bindchange="onAgeChange">
-            <view class="field picker-field">{{form.age}} 岁</view>
-          </picker>
-        </view>
-        <view class="field-group">
-          <view class="field-label">性别</view>
-          <view class="gender-switch">
-            <view class="gender-indicator {{form.gender === 'girl' ? 'right' : 'left'}}"></view>
-            <button class="gender-option {{form.gender === 'boy' ? 'active' : ''}}" data-gender="boy" bindtap="chooseGender">男孩</button>
-            <button class="gender-option {{form.gender === 'girl' ? 'active' : ''}}" data-gender="girl" bindtap="chooseGender">女孩</button>
+          <view class="field-label">模板类型</view>
+          <view class="type-switch">
+            <view
+              wx:for="{{typeTabs}}"
+              wx:key="value"
+              class="type-tab {{activeTemplateType === item.value ? 'active' : ''}}"
+              data-type="{{item.value}}"
+              bindtap="onTemplateTypeChange"
+            >
+              {{item.label}}
+            </view>
           </view>
         </view>
-        <button class="primary-button" loading="{{saving}}" bindtap="createProfile">创建</button>
+        <view class="field-group">
+          <view class="field-label">选择模版</view>
+          <picker mode="selector" range="{{templateOptions}}" value="{{templateIndex}}" bindchange="onTemplateChange" disabled="{{!templateOptions.length}}">
+            <view class="field picker-field">
+              <text>{{currentTemplate ? currentTemplate.displayLabel : '暂无可选模版'}}</text>
+            </view>
+          </picker>
+        </view>
+        <button class="primary-button" hover-class="button-hover" loading="{{saving}}" bindtap="createProfile">创建</button>
       </view>
     </view>
   </view>
 
   <view wx:if="{{showTaskModal}}" class="modal-mask centered" catchtap="closeTaskDetail">
     <view class="task-modal bounce-in" catchtap="noop">
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskDetail">×</button>
       <view class="modal-header">
         <view>
           <view class="modal-title compact">{{taskDetailName}}的任务</view>
           <view class="muted">共 {{taskDetails.length}} 个事项</view>
         </view>
-        <button class="close-button" bindtap="closeTaskDetail">×</button>
       </view>
       <view wx:if="{{taskDetails.length}}" class="task-detail-list">
-        <view wx:for="{{taskDetails}}" wx:key="_id" class="task-swipe-row">
-          <view class="task-actions-menu">
-            <button class="task-menu-button edit" data-index="{{index}}" bindtap="openTaskEditor">修改</button>
-            <button class="task-menu-button delete" data-index="{{index}}" bindtap="confirmTaskDelete">删除</button>
+        <view wx:for="{{taskGroups}}" wx:key="name" wx:for-item="group" wx:for-index="groupIndex" class="task-category-group">
+          <view class="task-category-title">
+            <text>{{group.name}}</text>
+            <text class="task-category-count">{{group.tasks.length}} 项</text>
           </view>
-          <view class="task-detail-card" style="transform: translateX({{item.offsetX}}px);" data-index="{{index}}" bindtouchstart="onTaskTouchStart" bindtouchmove="onTaskTouchMove" bindtouchend="onTaskTouchEnd">
-            <view class="task-detail-title">{{item.name}}</view>
-            <view class="task-detail-desc">{{item.description}}</view>
-            <view class="task-meta-row">
-              <text>{{item.category}}</text>
-              <text>{{item.enabledText}}</text>
+          <view class="task-category-list">
+            <view wx:for="{{group.tasks}}" wx:key="_id" wx:for-item="task" wx:for-index="taskIndex" class="task-swipe-row">
+              <view class="task-actions-menu">
+                <button class="task-menu-button edit" data-index="{{task.detailIndex}}" catchtap="openTaskEditor">修改</button>
+                <button class="task-menu-button delete" data-index="{{task.detailIndex}}" catchtap="confirmTaskDelete">删除</button>
+              </view>
+              <view class="task-detail-card" style="transform: translateX({{task.offsetX}}px);" data-group-index="{{groupIndex}}" data-task-index="{{taskIndex}}" data-index="{{task.detailIndex}}" bindtouchstart="onTaskTouchStart" bindtouchmove="onTaskTouchMove" bindtouchend="onTaskTouchEnd">
+                <button class="task-status-control {{task.enabled === false ? 'disabled' : 'enabled'}}" data-index="{{task.detailIndex}}" loading="{{task.statusSaving}}" hover-class="task-status-active" catchtap="toggleTaskStatusFromDetail">
+                  <text class="task-status-dot"></text>
+                  <text class="task-status-text">{{task.enabled === false ? '已停用' : '已启用'}}</text>
+                </button>
+                <view class="task-detail-title">{{task.name}}</view>
+                <view class="task-detail-desc">{{task.description}}</view>
+                <view class="task-meta-row">
+                  <text class="coin-plus">奖励 +{{task.rewardCoins}}</text>
+                  <text class="coin-minus">惩罚 -{{task.penaltyCoins}}</text>
+                </view>
+                <view class="task-created">创建时间：{{task.createdText}}</view>
+              </view>
             </view>
-            <view class="task-meta-row">
-              <text>奖励 +{{item.rewardCoins}}</text>
-              <text>惩罚 -{{item.penaltyCoins}}</text>
-            </view>
-            <view class="task-created">创建时间：{{item.createdText}}</view>
           </view>
         </view>
       </view>
@@ -106,9 +125,9 @@
 
   <view wx:if="{{showTaskEditor}}" class="modal-mask centered" catchtap="closeTaskEditor">
     <view class="task-editor bounce-in" catchtap="noop">
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskEditor">×</button>
       <view class="modal-header">
         <view class="modal-title compact">修改任务</view>
-        <button class="close-button" bindtap="closeTaskEditor">×</button>
       </view>
       <view class="form">
         <view class="field-group">
@@ -129,7 +148,30 @@
             <input class="field" type="number" value="{{editTask.penaltyCoins}}" data-field="penaltyCoins" bindinput="onEditTaskInput" />
           </view>
         </view>
-        <button class="primary-button" loading="{{taskSaving}}" bindtap="saveTaskEdit">保存修改</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{taskSaving}}" bindtap="saveTaskEdit">保存修改</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showTaskDeleteAuth}}" class="modal-mask centered task-delete-mask" catchtap="closeTaskDeleteAuth">
+    <view class="task-delete-modal bounce-in" catchtap="noop">
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskDeleteAuth">×</button>
+      <view class="modal-header">
+        <view>
+          <view class="modal-title compact">家长验证</view>
+          <view class="muted">删除“{{pendingDeleteTask.name}}”需要输入家长 PIN。</view>
+        </view>
+      </view>
+      <view class="form task-delete-form">
+        <view class="pin-input-row">
+          <input wx:if="{{!taskDeletePinVisible}}" class="field pin-field" password placeholder="输入家长 PIN" value="{{taskDeletePin}}" bindinput="onTaskDeletePinInput" />
+          <input wx:else class="field pin-field" placeholder="输入家长 PIN" value="{{taskDeletePin}}" bindinput="onTaskDeletePinInput" />
+          <button class="pin-toggle" bindtap="toggleTaskDeletePinVisible">{{taskDeletePinVisible ? '隐藏' : '显示'}}</button>
+        </view>
+        <view class="task-delete-actions">
+          <button class="secondary-button task-delete-action-button" hover-class="button-hover" bindtap="closeTaskDeleteAuth">取消</button>
+          <button class="danger-button task-delete-action-button" hover-class="button-hover" loading="{{taskDeleting}}" bindtap="confirmTaskDeleteAuth">确认删除</button>
+        </view>
       </view>
     </view>
   </view>

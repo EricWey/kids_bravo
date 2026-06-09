@@ -1,11 +1,10 @@
 const app = getApp()
-const { callCloud, showError } = require('../../utils/cloud')
+const { callCloud, showError, showPinError, isPinError } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
+const taskStatus = require('../../utils/taskStatus')
 
 Page({
   data: {
-    ages: [4, 5, 6, 7, 8, 9, 10],
-    ageIndex: 2,
     children: [],
     activeChildId: '',
     saving: false,
@@ -15,26 +14,60 @@ Page({
     taskDetailName: '',
     taskDetailChildId: '',
     taskDetails: [],
+    taskGroups: [],
     editTask: null,
     editTaskIndex: -1,
     taskSaving: false,
-    refreshing: false,
-    lastRefreshAt: 0,
-    touchStartX: 0,
-    touchingIndex: -1,
+    taskDeleting: false,
+    showTaskDeleteAuth: false,
+    pendingDeleteTask: null,
+    pendingDeleteTaskIndex: -1,
+    taskDeletePin: '',
+    taskDeletePinVisible: false,
     taskTouchStartX: 0,
     taskTouchingIndex: -1,
+    taskTouchingGroupIndex: -1,
+    taskTouchingTaskIndex: -1,
+    taskSwipeOpen: false,
+    typeTabs: [
+      { value: 'daily', label: '日常模版' },
+      { value: 'vacation', label: '寒暑假模版' }
+    ],
+    activeTemplateType: 'daily',
+    templateOptions: [],
+    templateIndex: 0,
+    currentTemplate: null,
     form: {
       nickname: '',
-      age: 6,
-      gender: 'girl'
+      templateId: ''
+    }
+  },
+
+  onLoad() {
+    this.templates = []
+    this.refreshing = false
+    this.lastRefreshAt = 0
+    this.touchStartX = 0
+    this.touchingIndex = -1
+    this.profileSwipeOpen = false
+    this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.applyTaskStatusChange(change))
+    this.loadTemplates()
+  },
+
+  onUnload() {
+    if (this.unsubscribeTaskStatus) {
+      this.unsubscribeTaskStatus()
+      this.unsubscribeTaskStatus = null
     }
   },
 
   noop() {},
 
-  openCreateModal() {
+  async openCreateModal() {
     this.setData({ showCreateModal: true })
+    if (!this.templates.length) {
+      await this.loadTemplates()
+    }
   },
 
   closeCreateModal() {
@@ -47,7 +80,13 @@ Page({
       showTaskModal: false,
       taskDetailName: '',
       taskDetailChildId: '',
-      taskDetails: []
+      taskDetails: [],
+      taskGroups: [],
+      showTaskDeleteAuth: false,
+      pendingDeleteTask: null,
+      pendingDeleteTaskIndex: -1,
+      taskDeletePin: '',
+      taskDeletePinVisible: false
     })
   },
 
@@ -60,6 +99,51 @@ Page({
     })
   },
 
+  dismissProfileSwipe() {
+    if (this.data.taskSwipeOpen && this.data.taskTouchingIndex < 0) {
+      this.closeTaskSwipe()
+    }
+    if (this.profileSwipeOpen && this.touchingIndex < 0) {
+      this.closeSwipe()
+    }
+  },
+
+  buildTaskGroups(taskDetails) {
+    const groups = []
+    const groupMap = {}
+    ;(taskDetails || []).forEach((task, detailIndex) => {
+      const name = task.category || '未分类任务'
+      if (!groupMap[name]) {
+        groupMap[name] = {
+          name,
+          tasks: []
+        }
+        groups.push(groupMap[name])
+      }
+      groupMap[name].tasks.push({
+        ...task,
+        detailIndex
+      })
+    })
+    return groups
+  },
+
+  applyTaskStatusChange(change) {
+    if (!change || change.childId !== this.data.taskDetailChildId) return
+    const index = this.data.taskDetails.findIndex((task) => task._id === change.taskId)
+    if (index < 0) return
+    const taskDetails = this.data.taskDetails.slice()
+    taskDetails[index] = {
+      ...taskDetails[index],
+      enabled: change.enabled !== false,
+      statusSaving: false
+    }
+    this.setData({
+      taskDetails,
+      taskGroups: this.buildTaskGroups(taskDetails)
+    })
+  },
+
   onShow() {
     syncTab(this, 0)
     this.loadFromApp()
@@ -69,9 +153,11 @@ Page({
   loadFromApp() {
     const children = (app.globalData.children || []).map((child) => ({
       ...child,
-      genderText: child.gender === 'girl' ? '女孩' : '男孩',
+      templateTypeText: this.getTypeText(child.templateType || child.type || ''),
+      avatarPlaceholder: child.nickname ? child.nickname.slice(0, 1) : '星',
       offsetX: 0
     }))
+    this.profileSwipeOpen = children.some((child) => child.offsetX < 0)
     this.setData({
       children,
       activeChildId: app.globalData.activeChildId
@@ -82,11 +168,47 @@ Page({
     await this.refreshChildren({ silent: false, minInterval: 0 })
   },
 
+  async loadTemplates() {
+    try {
+      const { templates = [] } = await callCloud('initTemplates', { type: this.data.activeTemplateType })
+      const nextTemplates = templates.map((item) => ({
+        ...item,
+        typeText: this.getTypeText(item.type),
+        displayLabel: this.getTemplateLabel(item)
+      }))
+      const currentTemplate = nextTemplates[0] || null
+      this.templates = nextTemplates
+      this.setData({
+        templateOptions: nextTemplates.map((item) => item.displayLabel),
+        templateIndex: 0,
+        currentTemplate,
+        'form.templateId': currentTemplate ? currentTemplate._id : ''
+      })
+    } catch (error) {
+      showError(error)
+    }
+  },
+
+  getTypeText(type) {
+    if (type === 'vacation') {
+      return '寒暑假模版'
+    }
+    if (type === 'daily') {
+      return '日常模版'
+    }
+    return ''
+  },
+
+  getTemplateLabel(template = {}) {
+    return template.packageType || template.category || template.name || template.title || '未命名模版'
+  },
+
   async refreshChildren(options = {}) {
     const now = Date.now()
     const minInterval = options.minInterval === undefined ? 1000 : options.minInterval
-    if (this.data.refreshing || (minInterval && now - this.data.lastRefreshAt < minInterval)) return
-    this.setData({ refreshing: true, lastRefreshAt: now })
+    if (this.refreshing || (minInterval && now - this.lastRefreshAt < minInterval)) return
+    this.refreshing = true
+    this.lastRefreshAt = now
     try {
       const { children = [] } = await callCloud('getOpenId')
       app.updateChildren(children)
@@ -97,7 +219,7 @@ Page({
     } catch (error) {
       if (!options.silent) showError(error)
     } finally {
-      this.setData({ refreshing: false })
+      this.refreshing = false
     }
   },
 
@@ -127,8 +249,8 @@ Page({
           taskDetails.push({
             ...task,
             category: category.name,
-            enabledText: task.enabled === false ? '已停用' : '启用中',
             createdText: this.formatDisplayTime(task.createdAt),
+            statusSaving: false,
             offsetX: 0
           })
         })
@@ -137,7 +259,8 @@ Page({
         showTaskModal: true,
         taskDetailName: name,
         taskDetailChildId: childId,
-        taskDetails
+        taskDetails,
+        taskGroups: this.buildTaskGroups(taskDetails)
       })
     } catch (error) {
       showError(error, '任务详情加载失败')
@@ -158,34 +281,99 @@ Page({
   },
 
   onTaskTouchStart(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (this.data.taskSwipeOpen && this.data.taskDetails[index] && this.data.taskDetails[index].offsetX === 0) {
+      this.closeTaskSwipe()
+      return
+    }
     this.setData({
       taskTouchStartX: event.touches[0].clientX,
-      taskTouchingIndex: Number(event.currentTarget.dataset.index)
+      taskTouchingIndex: index,
+      taskTouchingGroupIndex: Number(event.currentTarget.dataset.groupIndex),
+      taskTouchingTaskIndex: Number(event.currentTarget.dataset.taskIndex)
     })
   },
 
   onTaskTouchMove(event) {
     const index = this.data.taskTouchingIndex
     if (index < 0) return
+    const groupIndex = this.data.taskTouchingGroupIndex
+    const taskIndex = this.data.taskTouchingTaskIndex
     const deltaX = event.touches[0].clientX - this.data.taskTouchStartX
     const offsetX = Math.max(-96, Math.min(0, deltaX))
-    this.setData({ [`taskDetails[${index}].offsetX`]: offsetX })
+    const updates = { [`taskDetails[${index}].offsetX`]: offsetX }
+    if (groupIndex >= 0 && taskIndex >= 0) {
+      updates[`taskGroups[${groupIndex}].tasks[${taskIndex}].offsetX`] = offsetX
+    }
+    updates.taskSwipeOpen = offsetX < 0 || this.data.taskDetails.some((task, taskDetailIndex) => taskDetailIndex !== index && task.offsetX < 0)
+    this.setData(updates)
   },
 
   onTaskTouchEnd() {
     const index = this.data.taskTouchingIndex
     if (index < 0) return
+    const groupIndex = this.data.taskTouchingGroupIndex
+    const taskIndex = this.data.taskTouchingTaskIndex
     const offsetX = this.data.taskDetails[index].offsetX < -44 ? -96 : 0
-    this.setData({
+    const updates = {
       [`taskDetails[${index}].offsetX`]: offsetX,
-      taskTouchingIndex: -1
-    })
+      taskTouchingIndex: -1,
+      taskTouchingGroupIndex: -1,
+      taskTouchingTaskIndex: -1,
+      taskSwipeOpen: offsetX < 0
+    }
+    if (groupIndex >= 0 && taskIndex >= 0) {
+      updates[`taskGroups[${groupIndex}].tasks[${taskIndex}].offsetX`] = offsetX
+    }
+    this.setData(updates)
   },
 
   closeTaskSwipe() {
+    const taskDetails = this.data.taskDetails.map((task) => ({ ...task, offsetX: 0 }))
     this.setData({
-      taskDetails: this.data.taskDetails.map((task) => ({ ...task, offsetX: 0 }))
+      taskDetails,
+      taskGroups: this.buildTaskGroups(taskDetails),
+      taskTouchingIndex: -1,
+      taskTouchingGroupIndex: -1,
+      taskTouchingTaskIndex: -1,
+      taskSwipeOpen: false
     })
+  },
+
+  async toggleTaskStatusFromDetail(event) {
+    const index = Number(event.currentTarget.dataset.index)
+    const task = this.data.taskDetails[index]
+    if (!task || task.statusSaving) return
+    this.closeTaskSwipe()
+    const nextEnabled = task.enabled === false
+    const pendingTasks = this.data.taskDetails.map((item, itemIndex) => (
+      itemIndex === index ? { ...item, statusSaving: true } : item
+    ))
+    this.setData({
+      taskDetails: pendingTasks,
+      taskGroups: this.buildTaskGroups(pendingTasks)
+    })
+    try {
+      await taskStatus.setTaskStatus({
+        childId: this.data.taskDetailChildId,
+        taskId: task._id,
+        enabled: nextEnabled
+      })
+      wx.showToast({ title: nextEnabled ? '任务已启用' : '任务已停用', icon: 'success' })
+    } catch (error) {
+      const taskDetails = this.data.taskDetails.slice()
+      if (taskDetails[index]) {
+        taskDetails[index] = {
+          ...taskDetails[index],
+          statusSaving: false
+        }
+      }
+      this.setData({
+        taskDetails,
+        taskGroups: this.buildTaskGroups(taskDetails)
+      })
+      showError(error, nextEnabled ? '任务启用失败' : '任务停用失败')
+    }
   },
 
   openTaskEditor(event) {
@@ -229,11 +417,17 @@ Page({
         penaltyCoins: Number(task.penaltyCoins) || 0
       })
       const index = this.data.editTaskIndex
+      const taskDetails = this.data.taskDetails.slice()
+      taskDetails[index] = {
+        ...taskDetails[index],
+        name: task.name.trim(),
+        description: task.description.trim(),
+        rewardCoins: Number(task.rewardCoins) || 0,
+        penaltyCoins: Number(task.penaltyCoins) || 0
+      }
       this.setData({
-        [`taskDetails[${index}].name`]: task.name.trim(),
-        [`taskDetails[${index}].description`]: task.description.trim(),
-        [`taskDetails[${index}].rewardCoins`]: Number(task.rewardCoins) || 0,
-        [`taskDetails[${index}].penaltyCoins`]: Number(task.penaltyCoins) || 0,
+        taskDetails,
+        taskGroups: this.buildTaskGroups(taskDetails),
         taskSaving: false,
         showTaskEditor: false,
         editTask: null,
@@ -250,62 +444,130 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const task = this.data.taskDetails[index]
     if (!task) return
+    this.closeTaskSwipe()
+    this.setData({
+      showTaskDeleteAuth: true,
+      pendingDeleteTask: task,
+      pendingDeleteTaskIndex: index,
+      taskDeletePin: '',
+      taskDeletePinVisible: false
+    })
+  },
+
+  closeTaskDeleteAuth() {
+    if (this.data.taskDeleting) return
+    this.setData({
+      showTaskDeleteAuth: false,
+      pendingDeleteTask: null,
+      pendingDeleteTaskIndex: -1,
+      taskDeletePin: '',
+      taskDeletePinVisible: false
+    })
+  },
+
+  onTaskDeletePinInput(event) {
+    this.setData({ taskDeletePin: event.detail.value })
+  },
+
+  toggleTaskDeletePinVisible() {
+    this.setData({ taskDeletePinVisible: !this.data.taskDeletePinVisible })
+  },
+
+  confirmTaskDeleteAuth() {
+    const pin = String(this.data.taskDeletePin || '').trim()
+    if (!pin) {
+      wx.showToast({ title: '请输入家长 PIN', icon: 'none' })
+      return
+    }
     wx.showModal({
       title: '删除任务',
-      content: '确认删除该任务吗？此操作不可恢复。',
-      confirmText: '确认',
+      content: '验证通过后将停用该任务，今日打卡页不再展示。确认删除吗？',
+      confirmText: '确认删除',
       cancelText: '取消',
       confirmColor: '#d94444',
-      success: async (res) => {
-        if (!res.confirm) {
-          this.closeTaskSwipe()
-          return
-        }
-        try {
-          await callCloud('manageChildProfile', {
-            action: 'deleteTask',
-            childId: this.data.taskDetailChildId,
-            taskId: task._id
-          })
-          const taskDetails = this.data.taskDetails.slice()
-          taskDetails.splice(index, 1)
-          this.setData({ taskDetails })
-          wx.showToast({ title: '任务已删除', icon: 'success' })
-        } catch (error) {
-          showError(error, '任务删除失败')
+      success: (res) => {
+        if (res.confirm) {
+          this.deletePendingTask()
         }
       }
     })
   },
 
+  async deletePendingTask() {
+    const task = this.data.pendingDeleteTask
+    const index = this.data.pendingDeleteTaskIndex
+    if (!task || index < 0) return
+    this.setData({ taskDeleting: true })
+    try {
+      await callCloud('manageChildProfile', {
+        action: 'deleteTask',
+        childId: this.data.taskDetailChildId,
+        taskId: task._id,
+        pin: this.data.taskDeletePin
+      })
+      const taskDetails = this.data.taskDetails.slice()
+      taskDetails.splice(index, 1)
+      this.setData({
+        taskDetails,
+        taskGroups: this.buildTaskGroups(taskDetails),
+        taskDeleting: false,
+        showTaskDeleteAuth: false,
+        pendingDeleteTask: null,
+        pendingDeleteTaskIndex: -1,
+        taskDeletePin: '',
+        taskDeletePinVisible: false
+      })
+      wx.showToast({ title: '任务已删除', icon: 'success' })
+    } catch (error) {
+      this.setData({ taskDeleting: false })
+      const message = error && error.message ? error.message : ''
+      if (isPinError(message)) {
+        showPinError()
+      } else {
+        showError(error, '任务删除失败')
+      }
+    }
+  },
+
   onTouchStart(event) {
-    this.setData({
-      touchStartX: event.touches[0].clientX,
-      touchingIndex: Number(event.currentTarget.dataset.index)
-    })
+    const index = Number(event.currentTarget.dataset.index)
+    if (this.profileSwipeOpen && this.data.children[index] && this.data.children[index].offsetX === 0) {
+      this.closeSwipe()
+      return
+    }
+    this.touchStartX = event.touches[0].clientX
+    this.touchingIndex = index
   },
 
   onTouchMove(event) {
-    const index = this.data.touchingIndex
+    const index = this.touchingIndex
     if (index < 0) return
-    const deltaX = event.touches[0].clientX - this.data.touchStartX
+    const deltaX = event.touches[0].clientX - this.touchStartX
     const offsetX = Math.max(-78, Math.min(0, deltaX))
-    this.setData({ [`children[${index}].offsetX`]: offsetX })
+    this.profileSwipeOpen = offsetX < 0 || this.data.children.some((child, childIndex) => childIndex !== index && child.offsetX < 0)
+    this.setData({
+      [`children[${index}].offsetX`]: offsetX
+    })
   },
 
   onTouchEnd() {
-    const index = this.data.touchingIndex
+    const index = this.touchingIndex
     if (index < 0) return
     const offsetX = this.data.children[index].offsetX < -36 ? -78 : 0
+    this.touchingIndex = -1
+    this.profileSwipeOpen = offsetX < 0
     this.setData({
-      [`children[${index}].offsetX`]: offsetX,
-      touchingIndex: -1
+      [`children[${index}].offsetX`]: offsetX
     })
   },
 
   closeSwipe() {
     const children = this.data.children.map((child) => ({ ...child, offsetX: 0 }))
-    this.setData({ children })
+    this.touchingIndex = -1
+    this.profileSwipeOpen = false
+    this.setData({
+      children
+    })
   },
 
   chooseAvatar(event) {
@@ -432,11 +694,8 @@ Page({
           this.showFinalDeleteConfirm(id, name, pin)
         } catch (error) {
           const message = error && error.message ? error.message : ''
-          if (message.indexOf('PIN') >= 0 || message.indexOf('不正确') >= 0) {
-            wx.showToast({
-              title: 'PIN 输入错误，请重新输入',
-              icon: 'none'
-            })
+          if (isPinError(message)) {
+            showPinError()
           } else {
             showError(error)
           }
@@ -481,18 +740,21 @@ Page({
     this.setData({ 'form.nickname': event.detail.value })
   },
 
-  onAgeChange(event) {
-    const ageIndex = Number(event.detail.value)
-    this.setData({
-      ageIndex,
-      'form.age': this.data.ages[ageIndex]
-    })
+  onTemplateTypeChange(event) {
+    const nextType = event.currentTarget.dataset.type
+    if (!nextType || nextType === this.data.activeTemplateType) return
+    this.setData({ activeTemplateType: nextType })
+    this.loadTemplates()
   },
 
-  chooseGender(event) {
-    const gender = event.currentTarget.dataset.gender
-    if (gender === this.data.form.gender) return
-    this.setData({ 'form.gender': gender })
+  onTemplateChange(event) {
+    const templateIndex = Number(event.detail.value)
+    const currentTemplate = this.templates[templateIndex] || null
+    this.setData({
+      templateIndex,
+      currentTemplate,
+      'form.templateId': currentTemplate ? currentTemplate._id : ''
+    })
   },
 
   async createProfile() {
@@ -505,12 +767,16 @@ Page({
       wx.showToast({ title: '昵称至少 2 个字', icon: 'none' })
       return
     }
+    if (!this.data.form.templateId) {
+      wx.showToast({ title: '请先选择模版', icon: 'none' })
+      return
+    }
     this.setData({ saving: true })
     try {
       const result = await callCloud('createChildProfile', {
         nickname,
-        age: this.data.form.age,
-        gender: this.data.form.gender
+        templateId: this.data.form.templateId,
+        type: this.data.activeTemplateType
       })
       app.updateChildren(result.children)
       app.setActiveChild(result.child._id)

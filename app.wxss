@@ -1,7 +1,10 @@
 page {
   min-height: 100%;
   color: #493d31;
-  background: linear-gradient(180deg, #fff3bf 0%, #fffaf0 42%, #e7f8ff 100%);
+  background-color: #e7f8ff;
+  background-image: linear-gradient(180deg, #fff3bf 0%, #fffaf0 42%, #e7f8ff 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 }
 
@@ -82,16 +85,36 @@ button::after {
   border-radius: 999rpx;
   font-size: 28rpx;
   font-weight: 800;
+  border: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease; /* 流畅动画 */
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.1); 
+}
+
+.primary-button.button-hover,
+.secondary-button.button-hover,
+.danger-button.button-hover {
+  transform: scale(0.96);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 .primary-button {
   color: #3b2b16;
-  background: linear-gradient(135deg, #ffe66d, #ff9f43);
+  background: linear-gradient(135deg, #ffd760, #ff9533);
+  box-shadow: 0 6rpx 20rpx rgba(255, 165, 60, 0.3);
+}
+.primary-button.button-hover {
+  background: linear-gradient(135deg, #ffcb45, #ff8822);
 }
 
+/* 次要按钮：更干净清爽 */
 .secondary-button {
-  color: #306c80;
-  background: #dff7ff;
+  color: #2a6072;
+  background: #e6f9ff;
+  box-shadow: 0 4rpx 12rpx rgba(48, 108, 128, 0.1);
+}
+.secondary-button.button-hover {
+  background: #d1f2fc;
 }
 
 .danger-button {
@@ -126,7 +149,7 @@ button::after {
 }
 
 .coin-minus {
-  color: #d94444;
+  color: #913131;
 }
 
 .empty {
@@ -154,6 +177,58 @@ button::after {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
+}
+
+.task-status-control {
+  display: flex;
+  min-width: 112rpx;
+  min-height: 44rpx;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: transparent;
+  transition: transform 140ms ease, background 180ms ease, opacity 180ms ease;
+}
+
+.task-status-active {
+  transform: scale(0.96);
+  opacity: 0.82;
+}
+
+.task-status-dot {
+  display: block;
+  width: 20rpx;
+  height: 20rpx;
+  flex: 0 0 20rpx;
+  border-radius: 50%;
+  background: #35c36b;
+  box-shadow: 0 0 0 2rpx rgba(53, 195, 107, 0.12), 0 0 14rpx rgba(53, 195, 107, 0.42);
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.task-status-control.enabled .task-status-dot {
+  transform: scale(1.04);
+}
+.task-status-control.disabled {
+  background: transparent;
+}
+.task-status-control.disabled .task-status-dot {
+  background: #b8b1a8;
+  box-shadow: 0 0 0 6rpx rgba(139, 132, 123, 0.1);
+}
+
+.task-status-text {
+  color: #35a868;
+  font-size: 21rpx;
+  font-weight: 800;
+  line-height: 1;
+  transition: color 180ms ease;
+}
+
+.task-status-control.disabled .task-status-text {
+  color: #8a7a65;
 }
 
 .bounce-in {

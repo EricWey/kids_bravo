@@ -6,27 +6,57 @@
 
   <view wx:if="{{!unlocked}}" class="card pin-panel">
     <input class="field" password maxlength="4" type="number" placeholder="输入 4 位家长 PIN" value="{{pin}}" bindinput="onPinInput" />
-    <button class="primary-button" bindtap="unlock">解锁编辑</button>
-    <button class="secondary-button" bindtap="goSettings">设置或修改 PIN</button>
+    <button class="primary-button" hover-class="button-hover" bindtap="unlock">解锁编辑</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goSettings">设置或修改 PIN</button>
   </view>
 
   <view wx:if="{{unlocked}}" class="edit-area">
-    <button class="primary-button add-button" bindtap="addTask">添加新事项</button>
+    <view class="top-actions">
+      <button class="primary-button action-button" hover-class="button-hover" bindtap="addTask">添加新事项</button>
+      <button class="primary-button action-button" hover-class="button-hover" loading="{{saving}}" bindtap="save">保存任务</button>
+    </view>
     <view wx:for="{{tasks}}" wx:key="_id" class="card edit-card">
       <picker mode="selector" range="{{categoryNames}}" value="{{item.categoryIndex}}" data-index="{{index}}" bindchange="onCategoryChange">
         <view class="field picker-field">{{item.category}}</view>
       </picker>
-      <input class="field" placeholder="事项名称" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onInput" />
-      <textarea class="field textarea" placeholder="事项描述" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="onInput"></textarea>
+      <input class="field" placeholder="事项名称" value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onInput" bindblur="onInputBlur" />
+      <textarea class="field textarea compact-description" auto-height="{{false}}" placeholder="事项描述" value="{{item.description}}" data-index="{{index}}" data-field="description" bindinput="onInput" bindblur="onInputBlur"></textarea>
       <view class="grid-two">
-        <input class="field" type="number" placeholder="奖励金币" value="{{item.rewardCoins}}" data-index="{{index}}" data-field="rewardCoins" bindinput="onInput" />
-        <input class="field" type="number" placeholder="惩罚金币" value="{{item.penaltyCoins}}" data-index="{{index}}" data-field="penaltyCoins" bindinput="onInput" />
+        <input class="field" type="number" placeholder="奖励金币" value="{{item.rewardCoins}}" data-index="{{index}}" data-field="rewardCoins" bindinput="onInput" bindblur="onInputBlur" />
+        <input class="field" type="number" placeholder="惩罚金币" value="{{item.penaltyCoins}}" data-index="{{index}}" data-field="penaltyCoins" bindinput="onInput" bindblur="onInputBlur" />
       </view>
       <view class="row">
-        <switch checked="{{item.enabled}}" data-index="{{index}}" bindchange="onEnabledChange" />
-        <button class="danger-button small" data-index="{{index}}" bindtap="removeTask">删除</button>
+        <view class="status-switch-row">
+          <switch checked="{{item.enabled}}" data-index="{{index}}" bindchange="onEnabledChange" />
+          <view class="task-status-control inline {{item.enabled ? 'enabled' : 'disabled'}}">
+            <text class="task-status-dot"></text>
+            <text class="task-status-text">{{item.enabled ? '已启用' : '已停用'}}</text>
+          </view>
+        </view>
+        <button class="danger-button small" hover-class="button-hover" data-index="{{index}}" bindtap="removeTask">删除</button>
       </view>
     </view>
-    <button class="primary-button save-button" loading="{{saving}}" bindtap="save">保存任务</button>
+  </view>
+
+  <view wx:if="{{showAddModal}}" class="modal-mask centered" catchtap="closeAddModal">
+    <view class="task-modal bounce-in" catchtap="noop">
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeAddModal">×</button>
+      <view class="modal-title">添加新事项</view>
+      <view class="form">
+        <picker mode="selector" range="{{categoryNames}}" value="{{newTaskCategoryIndex}}" bindchange="onNewTaskCategoryChange">
+          <view class="field picker-field">{{newTaskForm.category}}</view>
+        </picker>
+        <input class="field" maxlength="28" placeholder="事项名称" value="{{newTaskForm.name}}" data-field="name" bindinput="onNewTaskInput" bindblur="onNewTaskBlur" />
+        <textarea class="field textarea compact-description" auto-height="{{false}}" maxlength="80" placeholder="事项描述" value="{{newTaskForm.description}}" data-field="description" bindinput="onNewTaskInput" bindblur="onNewTaskBlur"></textarea>
+        <view class="grid-two">
+          <input class="field" type="number" placeholder="奖励金币" value="{{newTaskForm.rewardCoins}}" data-field="rewardCoins" bindinput="onNewTaskInput" bindblur="onNewTaskBlur" />
+          <input class="field" type="number" placeholder="惩罚金币" value="{{newTaskForm.penaltyCoins}}" data-field="penaltyCoins" bindinput="onNewTaskInput" bindblur="onNewTaskBlur" />
+        </view>
+        <view class="modal-actions">
+          <button class="secondary-button" hover-class="button-hover" bindtap="closeAddModal">取消</button>
+          <button class="primary-button" hover-class="button-hover" bindtap="submitNewTask">提交</button>
+        </view>
+      </view>
+    </view>
   </view>
 </view>

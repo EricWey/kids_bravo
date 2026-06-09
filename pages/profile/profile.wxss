@@ -36,7 +36,7 @@
   background: transparent;
 }
 
-.icon-hit:active .icon-dot {
+.icon-hit-hover .icon-dot {
   transform: scale(0.86);
   filter: brightness(0.96);
 }
@@ -208,20 +208,19 @@
 .picker-field {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
-.gender-switch {
+.type-switch {
   display: flex;
-  position: relative;
+  gap: 14rpx;
   padding: 8rpx;
   border-radius: 999rpx;
   background: #fff6d8;
 }
 
-.gender-option {
+.type-tab {
   display: flex;
-  position: relative;
-  z-index: 1;
   flex: 1;
   min-height: 68rpx;
   align-items: center;
@@ -234,24 +233,10 @@
   transition: color 240ms ease;
 }
 
-.gender-switch .active {
+.type-switch .active {
   color: #453010;
-}
-
-.gender-indicator {
-  position: absolute;
-  top: 8rpx;
-  bottom: 8rpx;
-  left: 8rpx;
-  width: calc((100% - 16rpx) / 2);
-  border-radius: 999rpx;
   background: #ffca54;
   box-shadow: 0 8rpx 18rpx rgba(255, 162, 61, 0.18);
-  transition: transform 240ms ease;
-}
-
-.gender-indicator.right {
-  transform: translateX(100%);
 }
 
 .quick-actions {
@@ -270,6 +255,7 @@
 }
 
 .profile-modal {
+  position: relative;
   width: 100%;
   max-width: 650rpx;
   max-height: calc(100vh - 128rpx);
@@ -285,6 +271,14 @@
   font-weight: 900;
 }
 
+.simple-header {
+  margin-bottom: 24rpx;
+}
+
+.simple-header .modal-title {
+  margin-bottom: 0;
+}
+
 .modal-title.compact {
   margin-bottom: 6rpx;
 }
@@ -292,24 +286,41 @@
 .modal-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 18rpx;
+  justify-content: flex-start;
+  padding-right: 46rpx;
 }
 
 .close-button {
   display: flex;
-  width: 52rpx;
-  height: 52rpx;
+  position: absolute;
+  top: 0rpx;
+  right: -130rpx;
+  z-index: 9999;
+  width: 40rpx;    /* 正方形 */
+  height: 40rpx;   /* 正方形 */
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  color: #6a5b49;
-  font-size: 34rpx;
-  font-weight: 700;
-  background: #f7edd3;
+  color: #8d7760;
+  font-size: 36rpx; /* 稍微缩小一点，X不会溢出 */
+  font-weight: 900;
+  line-height: 1;
+  transition: all 140ms ease;
+  cursor: pointer;
+  border-radius: 50%; /* 常态就是正圆 */
+  box-sizing: border-box; /* 关键：防止尺寸被撑开 */
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.close-button-hover {
+  transform: scale(0.92) translateY(3rpx);
+  filter: brightness(0.96);
+  border-radius:50%
 }
 
 .task-modal {
+  position: relative;
   width: 100%;
   max-width: 680rpx;
   max-height: calc(100vh - 128rpx);
@@ -323,9 +334,44 @@
   display: flex;
   max-height: 62vh;
   flex-direction: column;
-  gap: 14rpx;
+  gap: 24rpx;
   margin-top: 22rpx;
   overflow-y: auto;
+}
+
+.task-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.task-category-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 0 6rpx;
+  color: #4b3b2d;
+  font-size: 27rpx;
+  font-weight: 900;
+}
+
+.task-category-count {
+  display: flex;
+  min-height: 40rpx;
+  align-items: center;
+  padding: 0 16rpx;
+  border-radius: 999rpx;
+  color: #2f8c72;
+  font-size: 22rpx;
+  font-weight: 900;
+  background: #e6fbf4;
+}
+
+.task-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
 }
 
 .task-swipe-row {
@@ -364,11 +410,18 @@
 .task-detail-card {
   position: relative;
   z-index: 1;
-  padding: 18rpx;
+  min-height: 172rpx;
+  padding: 18rpx 104rpx 18rpx 18rpx;
   border: 3rpx solid #ffefbf;
   border-radius: 18rpx;
   background: #fffaf0;
   transition: transform 180ms ease;
+}
+
+.task-status-control {
+  position: absolute;
+  top: 14rpx;
+  right: 16rpx;
 }
 
 .task-detail-title {
@@ -405,6 +458,7 @@
 }
 
 .task-editor {
+  position: relative;
   width: 100%;
   max-width: 680rpx;
   max-height: calc(100vh - 128rpx);
@@ -416,6 +470,63 @@
 
 .compact-textarea {
   min-height: 112rpx;
+}
+
+.task-delete-mask {
+  z-index: 140;
+}
+
+.task-delete-modal {
+  position: relative;
+  width: 100%;
+  max-width: 640rpx;
+  max-height: calc(100vh - 128rpx);
+  padding: 28rpx;
+  border-radius: 28rpx;
+  background: #fffdf5;
+  box-shadow: 0 18rpx 50rpx rgba(60, 39, 12, 0.18);
+}
+
+.task-delete-form {
+  margin-top: 24rpx;
+}
+
+.pin-input-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.pin-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.pin-toggle {
+  display: flex;
+  width: 108rpx;
+  min-height: 76rpx;
+  flex: 0 0 108rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999rpx;
+  color: #306c80;
+  background: #dff7ff;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.task-delete-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.task-delete-action-button {
+  min-height: 78rpx;
+  padding: 0 20rpx;
+  font-size: 26rpx;
 }
 
 .avatar-canvas {
