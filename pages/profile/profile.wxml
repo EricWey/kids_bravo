@@ -22,11 +22,11 @@
         <view class="card child-card {{activeChildId === item._id ? 'active' : ''}}" style="transform: translateX({{item.offsetX}}px);" data-id="{{item._id}}" data-index="{{index}}" bindtap="selectChild" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd">
           <view class="child-avatar" catchtap="chooseAvatar" data-id="{{item._id}}">
             <image wx:if="{{item.avatarUrl}}" class="avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" lazy-load></image>
-            <text wx:else>{{item.gender === 'girl' ? '花' : '星'}}</text>
+            <text wx:else>{{item.avatarPlaceholder}}</text>
           </view>
           <view class="child-info">
             <view class="child-name">{{item.nickname}}</view>
-            <view class="muted">{{item.age}} 岁 · {{item.genderText}} · {{item.templateName || '成长'}}</view>
+            <view class="muted">{{item.templateTypeText ? item.templateTypeText + ' · ' : ''}}{{item.templateName || '未设置模板'}}</view>
             <view class="avatar-hint">点击头像可上传照片</view>
           </view>
           <button wx:if="{{activeChildId === item._id}}" class="card-action detail-button" hover-class="card-action-hover" catchtap="showTaskDetail" data-id="{{item._id}}" data-name="{{item.nickname}}">任务详情</button>
@@ -55,18 +55,26 @@
           <input class="field" maxlength="12" placeholder="可填写昵称" value="{{form.nickname}}" bindinput="onNameInput" />
         </view>
         <view class="field-group">
-          <view class="field-label">年龄</view>
-          <picker mode="selector" range="{{ages}}" value="{{ageIndex}}" bindchange="onAgeChange">
-            <view class="field picker-field">{{form.age}} 岁</view>
-          </picker>
+          <view class="field-label">模板类型</view>
+          <view class="type-switch">
+            <view
+              wx:for="{{typeTabs}}"
+              wx:key="value"
+              class="type-tab {{activeTemplateType === item.value ? 'active' : ''}}"
+              data-type="{{item.value}}"
+              bindtap="onTemplateTypeChange"
+            >
+              {{item.label}}
+            </view>
+          </view>
         </view>
         <view class="field-group">
-          <view class="field-label">性别</view>
-          <view class="gender-switch">
-            <view class="gender-indicator {{form.gender === 'girl' ? 'right' : 'left'}}"></view>
-            <button class="gender-option {{form.gender === 'boy' ? 'active' : ''}}" data-gender="boy" bindtap="chooseGender">男孩</button>
-            <button class="gender-option {{form.gender === 'girl' ? 'active' : ''}}" data-gender="girl" bindtap="chooseGender">女孩</button>
-          </view>
+          <view class="field-label">选择模版</view>
+          <picker mode="selector" range="{{templateOptions}}" value="{{templateIndex}}" bindchange="onTemplateChange" disabled="{{!templateOptions.length}}">
+            <view class="field picker-field">
+              <text>{{currentTemplate ? currentTemplate.displayLabel : '暂无可选模版'}}</text>
+            </view>
+          </picker>
         </view>
         <button class="primary-button" loading="{{saving}}" bindtap="createProfile">创建</button>
       </view>

@@ -1,7 +1,10 @@
 page {
   min-height: 100%;
   color: #493d31;
-  background: linear-gradient(180deg, #fff3bf 0%, #fffaf0 42%, #e7f8ff 100%);
+  background-color: #e7f8ff;
+  background-image: linear-gradient(180deg, #fff3bf 0%, #fffaf0 42%, #e7f8ff 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
 }
 
@@ -82,16 +85,36 @@ button::after {
   border-radius: 999rpx;
   font-size: 28rpx;
   font-weight: 800;
+  border: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease; /* 流畅动画 */
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.1); 
+}
+
+.primary-button:active,
+.secondary-button:active,
+.danger-button:active {
+  transform: scale(0.96);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 .primary-button {
   color: #3b2b16;
-  background: linear-gradient(135deg, #ffe66d, #ff9f43);
+  background: linear-gradient(135deg, #ffd760, #ff9533);
+  box-shadow: 0 6rpx 20rpx rgba(255, 165, 60, 0.3);
+}
+.primary-button:active {
+  background: linear-gradient(135deg, #ffcb45, #ff8822);
 }
 
+/* 次要按钮：更干净清爽 */
 .secondary-button {
-  color: #306c80;
-  background: #dff7ff;
+  color: #2a6072;
+  background: #e6f9ff;
+  box-shadow: 0 4rpx 12rpx rgba(48, 108, 128, 0.1);
+}
+.secondary-button:active {
+  background: #d1f2fc;
 }
 
 .danger-button {

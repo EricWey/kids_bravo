@@ -165,15 +165,16 @@
 /* ========== 核心：左右按钮单独设置圆角，实现连体效果 ========== */
 /* 左侧【完成】按钮：只保留 左上、左下 圆角 */
 .done-button {
+  font-size: 50rpx;
   border-radius: 999rpx 0 0 999rpx;
-  background: #f0f9f6; /* 浅绿底色（常态） */
+  background: #bbefde; /* 浅绿底色（常态） */
   color: #2f8c72;
 }
 
 /* 右侧【未完成】按钮：只保留 右上、右下 圆角 */
 .miss-button {
   border-radius: 0 999rpx 999rpx 0;
-  background: #fff2f2; /* 浅红底色（常态） */
+  background: #f4e4e4; /* 浅红底色（常态） */
   color: #d94444;
 }
 

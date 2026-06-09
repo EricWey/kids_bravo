@@ -86,7 +86,7 @@
   display: grid;
   position: relative;
   z-index: 1;
-  gap: 12rpx;
+  gap: 10rpx;
 }
 
 .calendar-grid.week {
@@ -114,6 +114,12 @@
   color: #b8ab97;
   background: rgba(255, 255, 255, 0.58);
   border-color: #f2ead8;
+}
+
+.day-cell.placeholder {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .day-cell.today {

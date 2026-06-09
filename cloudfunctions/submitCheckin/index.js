@@ -1,8 +1,42 @@
 const { db, _, ok, getOpenid, getTasks, recomputeChildStats, formatDate } = require('./_shared/db')
 const { CATEGORIES } = require('./_shared/templates')
 
+function getCategoryNames(tasks = [], states = {}) {
+  const names = []
+  const seen = new Set()
+
+  CATEGORIES.forEach((name) => {
+    if (tasks.some((task) => task.category === name) || Object.values(states).some((state) => state.category === name)) {
+      names.push(name)
+      seen.add(name)
+    }
+  })
+
+  tasks.forEach((task) => {
+    const name = task.category || '未分类'
+    if (!seen.has(name)) {
+      seen.add(name)
+      names.push(name)
+    }
+  })
+
+  Object.values(states).forEach((state) => {
+    const name = state.category || '未分类'
+    if (!seen.has(name)) {
+      seen.add(name)
+      names.push(name)
+    }
+  })
+
+  if (!names.length) {
+    names.push(...CATEGORIES)
+  }
+
+  return names
+}
+
 function buildCategories(tasks, states) {
-  return CATEGORIES.map((name) => ({
+  return getCategoryNames(tasks, states).map((name) => ({
     name,
     tasks: tasks
       .filter((task) => task.category === name)

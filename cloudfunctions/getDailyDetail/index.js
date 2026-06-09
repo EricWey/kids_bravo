@@ -28,6 +28,40 @@ const DEFAULT_EXCHANGE_ITEMS = [
   }
 ]
 
+function getCategoryNames(tasks = [], taskStates = {}) {
+  const names = []
+  const seen = new Set()
+
+  CATEGORIES.forEach((name) => {
+    if (tasks.some((task) => task.category === name) || Object.values(taskStates).some((state) => state.category === name)) {
+      names.push(name)
+      seen.add(name)
+    }
+  })
+
+  tasks.forEach((task) => {
+    const name = task.category || '未分类'
+    if (!seen.has(name)) {
+      seen.add(name)
+      names.push(name)
+    }
+  })
+
+  Object.values(taskStates).forEach((state) => {
+    const name = state.category || '未分类'
+    if (!seen.has(name)) {
+      seen.add(name)
+      names.push(name)
+    }
+  })
+
+  if (!names.length) {
+    names.push(...CATEGORIES)
+  }
+
+  return names
+}
+
 function applyDateRange(query, startDate, endDate) {
   if (startDate && endDate) {
     query.date = _.gte(startDate).and(_.lte(endDate))
@@ -40,7 +74,7 @@ function applyDateRange(query, startDate, endDate) {
 }
 
 function groupTasks(tasks, taskStates = {}) {
-  const grouped = CATEGORIES.map((name) => ({
+  const grouped = getCategoryNames(tasks, taskStates).map((name) => ({
     name,
     tasks: tasks
       .filter((task) => task.category === name)

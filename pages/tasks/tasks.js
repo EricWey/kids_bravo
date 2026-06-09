@@ -10,7 +10,16 @@ Page({
     unlocked: false,
     tasks: [],
     categoryNames: CATEGORIES,
-    saving: false
+    saving: false,
+    showAddModal: false,
+    newTaskCategoryIndex: 0,
+    newTaskForm: {
+      category: CATEGORIES[0],
+      name: '',
+      description: '',
+      rewardCoins: 2,
+      penaltyCoins: 1
+    }
   },
 
   onLoad() {
@@ -69,32 +78,81 @@ Page({
       includeDisabled: true
     })
     const tasks = []
+    const categoryNames = CATEGORIES.slice()
     ;(detail.categories || []).forEach((category) => {
+      if (category.name && !categoryNames.includes(category.name)) {
+        categoryNames.push(category.name)
+      }
       category.tasks.forEach((task) => {
         tasks.push({
           ...task,
           category: category.name,
-          categoryIndex: CATEGORIES.indexOf(category.name),
+          categoryIndex: categoryNames.indexOf(category.name),
           enabled: task.enabled !== false
         })
       })
     })
-    this.setData({ tasks: taskStatus.applyTaskStatusList(tasks, app.globalData.activeChildId) })
+    this.setData({
+      categoryNames,
+      tasks: taskStatus.applyTaskStatusList(tasks, app.globalData.activeChildId)
+    })
   },
 
   addTask() {
+    const category = this.data.categoryNames[0] || CATEGORIES[0]
     this.setData({
-      tasks: this.data.tasks.concat({
-        _id: `local_${Date.now()}`,
-        category: CATEGORIES[0],
-        categoryIndex: 0,
+      showAddModal: true,
+      newTaskCategoryIndex: 0,
+      newTaskForm: {
+        category,
         name: '',
         description: '',
         rewardCoins: 2,
-        penaltyCoins: 1,
+        penaltyCoins: 1
+      }
+    })
+  },
+
+  closeAddModal() {
+    this.setData({ showAddModal: false })
+  },
+
+  noop() {},
+
+  onNewTaskCategoryChange(event) {
+    const categoryIndex = Number(event.detail.value)
+    this.setData({
+      newTaskCategoryIndex: categoryIndex,
+      'newTaskForm.category': this.data.categoryNames[categoryIndex]
+    })
+  },
+
+  onNewTaskInput(event) {
+    const field = event.currentTarget.dataset.field
+    this.setData({ [`newTaskForm.${field}`]: event.detail.value })
+  },
+
+  submitNewTask() {
+    const form = this.data.newTaskForm
+    const name = String(form.name || '').trim()
+    if (!name) {
+      wx.showToast({ title: '请填写事项名称', icon: 'none' })
+      return
+    }
+
+    this.setData({
+      tasks: [{
+        _id: `local_${Date.now()}`,
+        category: form.category,
+        categoryIndex: this.data.newTaskCategoryIndex,
+        name,
+        description: String(form.description || '').trim(),
+        rewardCoins: Number(form.rewardCoins) || 0,
+        penaltyCoins: Number(form.penaltyCoins) || 0,
         enabled: true,
         isNew: true
-      })
+      }].concat(this.data.tasks),
+      showAddModal: false
     })
   },
 
@@ -103,7 +161,7 @@ Page({
     const categoryIndex = Number(event.detail.value)
     this.setData({
       [`tasks[${index}].categoryIndex`]: categoryIndex,
-      [`tasks[${index}].category`]: CATEGORIES[categoryIndex]
+      [`tasks[${index}].category`]: this.data.categoryNames[categoryIndex]
     })
   },
 

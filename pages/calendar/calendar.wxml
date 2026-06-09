@@ -19,11 +19,11 @@
       <view wx:for="{{panels}}" wx:key="key" class="calendar-page">
         <view wx:if="{{mode === 'month'}}" class="month-watermark">{{item.watermarkMonth}}</view>
         <view class="calendar-grid {{mode}}">
-          <view wx:for="{{item.days}}" wx:key="date" wx:for-item="day" class="day-cell {{day.isToday ? 'today' : ''}} {{day.date === selectedDate ? 'selected' : ''}} {{day.isFuture ? 'future' : ''}}" data-date="{{day.date}}" bindtap="selectDay">
-            <view class="day-number">{{day.day}}</view>
-            <view wx:if="{{!day.isFuture}}" class="{{day.coinClass}}">{{day.total >= 0 ? '+' : ''}}{{day.total}}</view>
+          <view wx:for="{{item.days}}" wx:key="date" wx:for-item="day" class="day-cell {{day.isToday ? 'today' : ''}} {{day.date === selectedDate ? 'selected' : ''}} {{day.isFuture ? 'future' : ''}} {{day.isPlaceholder ? 'placeholder' : ''}}" data-date="{{day.date}}" bindtap="selectDay">
+            <view class="day-number">{{day.dayLabel}}</view>
+            <view wx:if="{{!day.isFuture && !day.isPlaceholder}}" class="{{day.coinClass}}">{{day.total > 0 ? '+' : ''}}{{day.total}}</view>
             <view wx:else class="coin-placeholder"></view>
-            <view wx:if="{{day.expenseCount}}" class="expense-dot">消费</view>
+            <view wx:if="{{day.expenseCount && !day.isPlaceholder}}" class="expense-dot">消费</view>
           </view>
         </view>
       </view>

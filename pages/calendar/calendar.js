@@ -1,5 +1,5 @@
 const app = getApp()
-const { callCloud, showError, formatDate, getWeekRange, getMonthRange, markPerf } = require('../../utils/cloud')
+const { callCloud, showError, formatDate, getWeekRange, markPerf } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
 
 Page({
@@ -58,9 +58,9 @@ Page({
     const requestId = Date.now()
     this.calendarRequestId = requestId
     try {
-      const viewDate = new Date(`${this.data.currentDate}T00:00:00`)
+      const viewDate = this.getViewDate(this.data.currentDate)
       const panelDates = [-1, 0, 1].map((offset) => this.getShiftedDate(viewDate, offset))
-      const ranges = panelDates.map((date) => this.data.mode === 'week' ? getWeekRange(date) : getMonthRange(date))
+      const ranges = panelDates.map((date) => this.getPanelRange(date))
       const results = await Promise.all(ranges.map((range) => callCloud('getCalendarSummary', {
         childId: app.globalData.activeChildId,
         mode: this.data.mode,
@@ -74,12 +74,7 @@ Page({
       const panels = results.map((result, index) => ({
         key: `${this.data.mode}_${index}_${formatDate(panelDates[index])}`,
         watermarkMonth: panelDates[index].getMonth() + 1,
-        days: (result.days || []).map((day) => ({
-          ...day,
-          isToday: day.date === today,
-          isFuture: day.date > today,
-          coinClass: Number(day.total || 0) > 0 ? 'coin-plus' : Number(day.total || 0) < 0 ? 'coin-minus' : 'coin-zero'
-        }))
+        days: this.decoratePanelDays(result.days || [], panelDates[index], today)
       }))
       this.setData({
         today,
@@ -129,12 +124,12 @@ Page({
   onCalendarTouchStart(event) {
     if (this.data.isAnimating) return
     const touch = event.touches[0]
+    this.swipeStartX = touch.clientX
+    this.swipeStartY = touch.clientY
+    this.swipeLastX = touch.clientX
+    this.swipeLastTime = Date.now()
+    this.swipeVelocity = 0
     this.setData({
-      swipeStartX: touch.clientX,
-      swipeStartY: touch.clientY,
-      swipeLastX: touch.clientX,
-      swipeLastTime: Date.now(),
-      swipeVelocity: 0,
       isDragging: true,
       trackTransition: 'none'
     })
@@ -143,18 +138,17 @@ Page({
   onCalendarTouchMove(event) {
     if (!this.data.isDragging || this.data.isAnimating) return
     const touch = event.touches[0]
-    const deltaX = touch.clientX - this.data.swipeStartX
-    const deltaY = touch.clientY - this.data.swipeStartY
+    const deltaX = touch.clientX - this.swipeStartX
+    const deltaY = touch.clientY - this.swipeStartY
     if (Math.abs(deltaY) > Math.abs(deltaX) * 1.15) return
     const now = Date.now()
-    const elapsed = Math.max(16, now - this.data.swipeLastTime)
-    const velocity = (touch.clientX - this.data.swipeLastX) / elapsed
+    const elapsed = Math.max(16, now - this.swipeLastTime)
+    this.swipeVelocity = (touch.clientX - this.swipeLastX) / elapsed
+    this.swipeLastX = touch.clientX
+    this.swipeLastTime = now
     const bounded = this.getBoundedOffset(deltaX)
     this.pendingDragState = {
-      dragOffset: bounded,
-      swipeLastX: touch.clientX,
-      swipeLastTime: now,
-      swipeVelocity: velocity
+      dragOffset: bounded
     }
     if (this.dragFrameTimer) return
     this.dragFrameTimer = setTimeout(() => {
@@ -167,14 +161,19 @@ Page({
 
   onCalendarTouchEnd(event) {
     if (!this.data.isDragging || this.data.isAnimating) return
+    if (this.dragFrameTimer) {
+      clearTimeout(this.dragFrameTimer)
+      this.dragFrameTimer = null
+      this.pendingDragState = null
+    }
     const touch = event.changedTouches[0]
-    const deltaX = touch.clientX - this.data.swipeStartX
-    const deltaY = touch.clientY - this.data.swipeStartY
+    const deltaX = touch.clientX - this.swipeStartX
+    const deltaY = touch.clientY - this.swipeStartY
     if (Math.abs(deltaX) < 20 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) {
       this.snapBack()
       return
     }
-    const shouldCommit = Math.abs(deltaX) > this.data.panelWidth * 0.28 || Math.abs(this.data.swipeVelocity) > 0.55
+    const shouldCommit = Math.abs(deltaX) > this.data.panelWidth * 0.28 || Math.abs(this.swipeVelocity || 0) > 0.55
     if (!shouldCommit) {
       this.snapBack()
       return
@@ -190,7 +189,7 @@ Page({
 
   animateToPanel(direction) {
     const targetOffset = direction < 0 ? -this.data.panelWidth : this.data.panelWidth
-    const duration = Math.max(240, Math.min(340, 300 - Math.abs(this.data.swipeVelocity) * 80))
+    const duration = Math.max(220, Math.min(320, 280 - Math.abs(this.swipeVelocity || 0) * 80))
     this.setData({
       dragOffset: targetOffset,
       trackTransition: `transform ${duration}ms cubic-bezier(0.22, 0.9, 0.2, 1)`,
@@ -204,11 +203,11 @@ Page({
   },
 
   shiftCalendar(direction) {
-    const date = new Date(`${this.data.currentDate}T00:00:00`)
+    const date = this.getViewDate(this.data.currentDate)
     if (this.data.mode === 'week') {
       date.setDate(date.getDate() - direction * 7)
     } else {
-      date.setMonth(date.getMonth() - direction)
+      date.setMonth(date.getMonth() - direction, 1)
     }
     const panels = this.getRotatedPanels(direction)
     const centerPanel = panels[1] || { days: [] }
@@ -266,7 +265,7 @@ Page({
     if (this.data.mode === 'week') {
       next.setDate(next.getDate() + offset * 7)
     } else {
-      next.setMonth(next.getMonth() + offset)
+      next.setMonth(next.getMonth() + offset, 1)
     }
     return next
   },
@@ -276,13 +275,50 @@ Page({
     if (this.data.mode === 'week') {
       next.setDate(next.getDate() - direction * 7)
     } else {
-      next.setMonth(next.getMonth() - direction)
+      next.setMonth(next.getMonth() - direction, 1)
     }
     const min = new Date(`${this.data.minDate}T00:00:00`)
     const max = new Date()
     max.setFullYear(max.getFullYear() + 1)
     max.setHours(0, 0, 0, 0)
     return next >= min && next <= max
+  },
+
+  getViewDate(value) {
+    const date = new Date(`${value}T00:00:00`)
+    if (this.data.mode === 'month') {
+      date.setDate(1)
+    }
+    return date
+  },
+
+  getPanelRange(date) {
+    if (this.data.mode === 'week') return getWeekRange(date)
+    const first = new Date(date.getFullYear(), date.getMonth(), 1)
+    const start = new Date(first)
+    const startDay = start.getDay() || 7
+    start.setDate(first.getDate() - startDay + 1)
+    const end = new Date(start)
+    end.setDate(start.getDate() + 41)
+    return { start: formatDate(start), end: formatDate(end) }
+  },
+
+  decoratePanelDays(days, viewDate, today) {
+    const viewMonth = viewDate.getMonth()
+    return days.map((day) => {
+      const date = new Date(`${day.date}T00:00:00`)
+      const inCurrentMonth = this.data.mode !== 'month' || date.getMonth() === viewMonth
+      const isPlaceholder = this.data.mode === 'month' && !inCurrentMonth
+      return {
+        ...day,
+        inCurrentMonth,
+        isPlaceholder,
+        dayLabel: isPlaceholder ? '' : String(day.day),
+        isToday: day.date === today,
+        isFuture: day.date > today,
+        coinClass: Number(day.total || 0) > 0 ? 'coin-plus' : Number(day.total || 0) < 0 ? 'coin-minus' : 'coin-zero'
+      }
+    })
   },
 
   showBoundaryToast() {
@@ -298,7 +334,7 @@ Page({
   selectDay(event) {
     const date = event.currentTarget.dataset.date
     const day = this.data.days.find((item) => item.date === date)
-    if (!day || day.isFuture) return
+    if (!day || day.isFuture || day.isPlaceholder) return
     this.setData({ selectedDate: date })
     this.loadDetail(date)
   },

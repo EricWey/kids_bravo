@@ -1,33 +1,64 @@
 <view class="page">
   <view class="hero">
     <view class="hero-title">任务模板</view>
-    <view class="hero-subtitle">按年龄和性别推荐，也可以预览后应用到当前档案。</view>
+    <view class="hero-subtitle">先选择模板分类，再从下拉框中挑选对应模板并应用到当前档案。</view>
   </view>
 
   <view class="filters card">
-    <picker mode="selector" range="{{ages}}" value="{{ageIndex}}" bindchange="onAgeChange">
-      <view class="field picker-field">年龄：{{age}} 岁</view>
-    </picker>
-    <view class="gender-switch">
-      <view class="gender-indicator {{gender === 'girl' ? 'right' : 'left'}}"></view>
-      <button class="{{gender === 'boy' ? 'active' : ''}}" data-gender="boy" bindtap="chooseGender">男孩</button>
-      <button class="{{gender === 'girl' ? 'active' : ''}}" data-gender="girl" bindtap="chooseGender">女孩</button>
+    <view class="type-switch">
+      <view
+        wx:for="{{typeTabs}}"
+        wx:key="value"
+        class="type-tab {{activeType === item.value ? 'active' : ''}}"
+        data-type="{{item.value}}"
+        bindtap="onTypeChange"
+      >
+        {{item.label}}
+      </view>
     </view>
+
+    <picker mode="selector" range="{{templateOptions}}" value="{{templateIndex}}" bindchange="onTemplateChange" disabled="{{!templateOptions.length}}">
+      <view class="field picker-field">
+        <text>选择模版</text>
+        <text class="picker-value">{{currentTemplate ? currentTemplate.displayLabel : '暂无可选模版'}}</text>
+      </view>
+    </picker>
   </view>
 
-  <view wx:for="{{templates}}" wx:key="_id" class="card template-card">
+  <view wx:if="{{currentTemplate}}" class="card template-card">
     <view class="row">
       <view>
-        <view class="template-title">{{item.name}}</view>
-        <view class="muted">{{item.age}} 岁 · {{item.genderText}}</view>
+        <view class="template-title">{{currentTemplate.displayLabel}}</view>
+        <view class="muted">{{currentTemplate.typeText}}</view>
       </view>
-      <button class="primary-button small" data-id="{{item._id}}" bindtap="applyTemplate">应用</button>
+      <button class="primary-button small" data-id="{{currentTemplate._id}}" bindtap="applyTemplate">应用</button>
     </view>
-    <view wx:for="{{item.categories}}" wx:key="name" wx:for-item="category" class="category-block">
+    <view wx:for="{{currentTemplate.categories}}" wx:key="name" wx:for-item="category" class="category-block">
       <view class="category-title">{{category.name}}</view>
       <view wx:for="{{category.tasks}}" wx:key="name" wx:for-item="task" class="task-preview">
         <text>{{task.name}}</text>
         <text class="muted">+{{task.rewardCoins}} / -{{task.penaltyCoins}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="card empty-state">
+    <view class="empty-title">当前分类下还没有模版</view>
+    <view class="muted">可以先检查数据库中的 type 字段是否为 {{activeType}}。</view>
+  </view>
+
+  <view wx:if="{{showPinModal}}" class="modal-mask centered template-pin-mask" catchtap="closePinModal">
+    <view class="template-pin-modal bounce-in" catchtap="noop">
+      <view class="modal-title">家长验证</view>
+      <view class="muted template-pin-hint">请输入家长 PIN，验证通过后将用当前模版覆盖任务列表。</view>
+      <view class="pin-input-row">
+        <input wx:if="{{!templatePinVisible}}" class="field pin-field" password maxlength="4" type="number" placeholder="输入家长 PIN" value="{{templatePin}}" bindinput="onTemplatePinInput" />
+        <input wx:else class="field pin-field" maxlength="4" type="number" placeholder="输入家长 PIN" value="{{templatePin}}" bindinput="onTemplatePinInput" />
+        <button class="pin-toggle" bindtap="toggleTemplatePinVisible">{{templatePinVisible ? '隐藏' : '显示'}}</button>
+      </view>
+      <view class="template-pin-actions">
+        <button class="secondary-button template-pin-action-button" disabled="{{applying}}" bindtap="closePinModal">取消</button>
+        <button class="primary-button template-pin-action-button" loading="{{applying}}" bindtap="confirmApplyTemplate">提交</button>
       </view>
     </view>
   </view>

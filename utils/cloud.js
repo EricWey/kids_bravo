@@ -30,11 +30,45 @@ function callCloud(name, data = {}) {
 }
 
 function showError(error, fallback = '操作失败，请稍后再试') {
-  const message = error && error.message ? error.message : fallback
+  const rawMessage = error && error.message ? error.message : fallback
+  const message = rawMessage || fallback
+  if (isPinError(error)) {
+    showPinError()
+    return
+  }
   wx.showToast({
     title: message,
     icon: 'none',
     duration: 2200
+  })
+}
+
+function getErrorText(error) {
+  if (!error) return ''
+  if (typeof error === 'string') return error
+  return [
+    error.message,
+    error.errMsg,
+    error.stack
+  ].filter(Boolean).join(' ')
+}
+
+function isPinError(error) {
+  const message = getErrorText(error)
+  return message.includes('PIN 不正确') ||
+    message.includes('PIN不正确') ||
+    message.includes('PIN 输入错误') ||
+    message.includes('PIN码输入错误') ||
+    message.includes('家长 PIN 不正确') ||
+    message.includes('当前 PIN 不正确')
+}
+
+function showPinError() {
+  wx.showModal({
+    title: '验证失败',
+    content: 'PIN码输入错误，请重新输入',
+    showCancel: false,
+    confirmText: '知道了'
   })
 }
 
@@ -67,6 +101,8 @@ module.exports = {
   formatDate,
   getWeekRange,
   getMonthRange,
+  isPinError,
+  showPinError,
   clearCloudCache: perf.clearCache,
   markPerf: perf.mark
 }

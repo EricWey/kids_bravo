@@ -32,7 +32,7 @@
             </view>
           </view>
           <view class="task-actions">
-            <button class="checkin-icon-button done-button {{task.status === 'done' ? 'selected' : ''}} {{task.status && task.status !== 'done' ? 'muted' : ''}}" loading="{{submittingTaskId === task._id}}" disabled="{{!!task.status || !!submittingTaskId}}" data-id="{{task._id}}" data-status="done" bindtap="submit" aria-label="完成">✅ 👍🏻</button>
+            <button class="checkin-icon-button done-button {{task.status === 'done' ? 'selected' : ''}} {{task.status && task.status !== 'done' ? 'muted' : ''}}" loading="{{submittingTaskId === task._id}}" disabled="{{!!task.status || !!submittingTaskId}}" data-id="{{task._id}}" data-status="done" bindtap="submit" aria-label="完成">🎯</button>
             <button class="checkin-icon-button miss-button {{task.status === 'missed' ? 'selected' : ''}} {{task.status && task.status !== 'missed' ? 'muted' : ''}}" loading="{{submittingTaskId === task._id}}" disabled="{{!!task.status || !!submittingTaskId}}" data-id="{{task._id}}" data-status="missed" bindtap="submit" aria-label="未完成">❌</button>
           </view>
         </view>

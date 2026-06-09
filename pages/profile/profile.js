@@ -1,12 +1,10 @@
 const app = getApp()
-const { callCloud, showError } = require('../../utils/cloud')
+const { callCloud, showError, showPinError, isPinError } = require('../../utils/cloud')
 const { syncTab } = require('../../utils/tabbar')
 const taskStatus = require('../../utils/taskStatus')
 
 Page({
   data: {
-    ages: [4, 5, 6, 7, 8, 9, 10],
-    ageIndex: 2,
     children: [],
     activeChildId: '',
     saving: false,
@@ -36,15 +34,24 @@ Page({
     taskTouchingGroupIndex: -1,
     taskTouchingTaskIndex: -1,
     taskSwipeOpen: false,
+    typeTabs: [
+      { value: 'daily', label: '日常模版' },
+      { value: 'vacation', label: '寒暑假模版' }
+    ],
+    activeTemplateType: 'daily',
+    templates: [],
+    templateOptions: [],
+    templateIndex: 0,
+    currentTemplate: null,
     form: {
       nickname: '',
-      age: 6,
-      gender: 'girl'
+      templateId: ''
     }
   },
 
   onLoad() {
     this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.applyTaskStatusChange(change))
+    this.loadTemplates()
   },
 
   onUnload() {
@@ -56,8 +63,11 @@ Page({
 
   noop() {},
 
-  openCreateModal() {
+  async openCreateModal() {
     this.setData({ showCreateModal: true })
+    if (!this.data.templates.length) {
+      await this.loadTemplates()
+    }
   },
 
   closeCreateModal() {
@@ -143,7 +153,8 @@ Page({
   loadFromApp() {
     const children = (app.globalData.children || []).map((child) => ({
       ...child,
-      genderText: child.gender === 'girl' ? '女孩' : '男孩',
+      templateTypeText: this.getTypeText(child.templateType || child.type || ''),
+      avatarPlaceholder: child.nickname ? child.nickname.slice(0, 1) : '星',
       offsetX: 0
     }))
     this.setData({
@@ -155,6 +166,41 @@ Page({
 
   async reload() {
     await this.refreshChildren({ silent: false, minInterval: 0 })
+  },
+
+  async loadTemplates() {
+    try {
+      const { templates = [] } = await callCloud('initTemplates', { type: this.data.activeTemplateType })
+      const nextTemplates = templates.map((item) => ({
+        ...item,
+        typeText: this.getTypeText(item.type),
+        displayLabel: this.getTemplateLabel(item)
+      }))
+      const currentTemplate = nextTemplates[0] || null
+      this.setData({
+        templates: nextTemplates,
+        templateOptions: nextTemplates.map((item) => item.displayLabel),
+        templateIndex: 0,
+        currentTemplate,
+        'form.templateId': currentTemplate ? currentTemplate._id : ''
+      })
+    } catch (error) {
+      showError(error)
+    }
+  },
+
+  getTypeText(type) {
+    if (type === 'vacation') {
+      return '寒暑假模版'
+    }
+    if (type === 'daily') {
+      return '日常模版'
+    }
+    return ''
+  },
+
+  getTemplateLabel(template = {}) {
+    return template.packageType || template.category || template.name || template.title || '未命名模版'
   },
 
   async refreshChildren(options = {}) {
@@ -474,8 +520,8 @@ Page({
     } catch (error) {
       this.setData({ taskDeleting: false })
       const message = error && error.message ? error.message : ''
-      if (message.indexOf('PIN') >= 0 || message.indexOf('不正确') >= 0) {
-        wx.showToast({ title: '家长 PIN 验证失败', icon: 'none' })
+      if (isPinError(message)) {
+        showPinError()
       } else {
         showError(error, '任务删除失败')
       }
@@ -649,11 +695,8 @@ Page({
           this.showFinalDeleteConfirm(id, name, pin)
         } catch (error) {
           const message = error && error.message ? error.message : ''
-          if (message.indexOf('PIN') >= 0 || message.indexOf('不正确') >= 0) {
-            wx.showToast({
-              title: 'PIN 输入错误，请重新输入',
-              icon: 'none'
-            })
+          if (isPinError(message)) {
+            showPinError()
           } else {
             showError(error)
           }
@@ -698,18 +741,21 @@ Page({
     this.setData({ 'form.nickname': event.detail.value })
   },
 
-  onAgeChange(event) {
-    const ageIndex = Number(event.detail.value)
-    this.setData({
-      ageIndex,
-      'form.age': this.data.ages[ageIndex]
-    })
+  onTemplateTypeChange(event) {
+    const nextType = event.currentTarget.dataset.type
+    if (!nextType || nextType === this.data.activeTemplateType) return
+    this.setData({ activeTemplateType: nextType })
+    this.loadTemplates()
   },
 
-  chooseGender(event) {
-    const gender = event.currentTarget.dataset.gender
-    if (gender === this.data.form.gender) return
-    this.setData({ 'form.gender': gender })
+  onTemplateChange(event) {
+    const templateIndex = Number(event.detail.value)
+    const currentTemplate = this.data.templates[templateIndex] || null
+    this.setData({
+      templateIndex,
+      currentTemplate,
+      'form.templateId': currentTemplate ? currentTemplate._id : ''
+    })
   },
 
   async createProfile() {
@@ -722,12 +768,16 @@ Page({
       wx.showToast({ title: '昵称至少 2 个字', icon: 'none' })
       return
     }
+    if (!this.data.form.templateId) {
+      wx.showToast({ title: '请先选择模版', icon: 'none' })
+      return
+    }
     this.setData({ saving: true })
     try {
       const result = await callCloud('createChildProfile', {
         nickname,
-        age: this.data.form.age,
-        gender: this.data.form.gender
+        templateId: this.data.form.templateId,
+        type: this.data.activeTemplateType
       })
       app.updateChildren(result.children)
       app.setActiveChild(result.child._id)

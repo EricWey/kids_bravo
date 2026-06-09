@@ -3,54 +3,71 @@ const { callCloud, showError } = require('../../utils/cloud')
 
 Page({
   data: {
-    ages: [4, 5, 6, 7, 8, 9, 10],
-    ageIndex: 2,
-    age: 6,
-    gender: 'girl',
-    templates: []
+    typeTabs: [
+      { value: 'daily', label: '日常模版' },
+      { value: 'vacation', label: '寒暑假模版' }
+    ],
+    activeType: 'daily',
+    templates: [],
+    templateOptions: [],
+    templateIndex: 0,
+    currentTemplate: null,
+    showPinModal: false,
+    templatePin: '',
+    templatePinVisible: false,
+    pendingTemplateId: '',
+    applying: false
   },
 
   onLoad() {
-    const child = app.getActiveChild && app.getActiveChild()
-    if (child) {
-      const ageIndex = this.data.ages.indexOf(child.age)
-      this.setData({
-        age: child.age,
-        ageIndex: ageIndex >= 0 ? ageIndex : 2,
-        gender: child.gender
-      })
-    }
     this.loadTemplates()
   },
 
   async loadTemplates() {
     try {
-      const { templates = [] } = await callCloud('initTemplates', {
-        age: this.data.age,
-        gender: this.data.gender
-      })
+      const { templates = [] } = await callCloud('initTemplates', { type: this.data.activeType })
+      const nextTemplates = templates.map((item) => ({
+        ...item,
+        typeText: this.getTypeText(item.type),
+        displayLabel: this.getTemplateLabel(item)
+      }))
+      const currentTemplate = nextTemplates[0] || null
+
       this.setData({
-        templates: templates.map((item) => ({
-          ...item,
-          genderText: item.gender === 'girl' ? '女孩' : '男孩'
-        }))
+        templates: nextTemplates,
+        templateOptions: nextTemplates.map((item) => item.displayLabel),
+        templateIndex: 0,
+        currentTemplate
       })
     } catch (error) {
       showError(error)
     }
   },
 
-  onAgeChange(event) {
-    const ageIndex = Number(event.detail.value)
-    this.setData({ ageIndex, age: this.data.ages[ageIndex] })
+  getTypeText(type) {
+    if (type === 'vacation') {
+      return '寒暑假模版'
+    }
+    return '日常模版'
+  },
+
+  getTemplateLabel(template = {}) {
+    return template.packageType || template.category || template.name || template.title || '未命名模版'
+  },
+
+  onTypeChange(event) {
+    const nextType = event.currentTarget.dataset.type
+    if (!nextType || nextType === this.data.activeType) return
+    this.setData({ activeType: nextType })
     this.loadTemplates()
   },
 
-  chooseGender(event) {
-    const gender = event.currentTarget.dataset.gender
-    if (gender === this.data.gender) return
-    this.setData({ gender })
-    this.loadTemplates()
+  onTemplateChange(event) {
+    const templateIndex = Number(event.detail.value)
+    this.setData({
+      templateIndex,
+      currentTemplate: this.data.templates[templateIndex] || null
+    })
   },
 
   async applyTemplate(event) {
@@ -59,14 +76,73 @@ Page({
       wx.showToast({ title: '请先选择档案', icon: 'none' })
       return
     }
+    const templateId = event.currentTarget.dataset.id
+    if (!templateId) {
+      wx.showToast({ title: '请先选择模版', icon: 'none' })
+      return
+    }
+    wx.showModal({
+      title: '确认覆盖',
+      content: '确认要用模板任务覆盖当前的任务吗？',
+      confirmText: '确认',
+      cancelText: '取消',
+      success: (res) => {
+        if (!res.confirm) return
+        this.setData({
+          showPinModal: true,
+          templatePin: '',
+          templatePinVisible: false,
+          pendingTemplateId: templateId
+        })
+      }
+    })
+  },
+
+  onTemplatePinInput(event) {
+    this.setData({ templatePin: event.detail.value })
+  },
+
+  toggleTemplatePinVisible() {
+    this.setData({ templatePinVisible: !this.data.templatePinVisible })
+  },
+
+  closePinModal() {
+    if (this.data.applying) return
+    this.setData({
+      showPinModal: false,
+      templatePin: '',
+      templatePinVisible: false,
+      pendingTemplateId: ''
+    })
+  },
+
+  noop() {},
+
+  async confirmApplyTemplate() {
+    const pin = String(this.data.templatePin || '').trim()
+    if (!pin) {
+      wx.showToast({ title: '请输入家长 PIN', icon: 'none' })
+      return
+    }
+
+    this.setData({ applying: true })
     try {
       await callCloud('createChildProfile', {
-        childId,
-        templateId: event.currentTarget.dataset.id,
+        childId: app.globalData.activeChildId,
+        templateId: this.data.pendingTemplateId,
+        pin,
         mode: 'applyTemplate'
+      })
+      this.setData({
+        applying: false,
+        showPinModal: false,
+        templatePin: '',
+        templatePinVisible: false,
+        pendingTemplateId: ''
       })
       wx.showToast({ title: '模板已应用', icon: 'success' })
     } catch (error) {
+      this.setData({ applying: false })
       showError(error)
     }
   }
