@@ -23,6 +23,8 @@ Page({
   },
 
   onLoad() {
+    this.taskDrafts = {}
+    this.newTaskDraft = {}
     this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.handleTaskStatusChange(change))
   },
 
@@ -100,20 +102,22 @@ Page({
 
   addTask() {
     const category = this.data.categoryNames[0] || CATEGORIES[0]
+    this.newTaskDraft = {
+      category,
+      name: '',
+      description: '',
+      rewardCoins: 2,
+      penaltyCoins: 1
+    }
     this.setData({
       showAddModal: true,
       newTaskCategoryIndex: 0,
-      newTaskForm: {
-        category,
-        name: '',
-        description: '',
-        rewardCoins: 2,
-        penaltyCoins: 1
-      }
+      newTaskForm: this.newTaskDraft
     })
   },
 
   closeAddModal() {
+    this.newTaskDraft = {}
     this.setData({ showAddModal: false })
   },
 
@@ -121,19 +125,36 @@ Page({
 
   onNewTaskCategoryChange(event) {
     const categoryIndex = Number(event.detail.value)
+    const category = this.data.categoryNames[categoryIndex]
+    this.newTaskDraft = {
+      ...(this.newTaskDraft || this.data.newTaskForm),
+      category
+    }
     this.setData({
       newTaskCategoryIndex: categoryIndex,
-      'newTaskForm.category': this.data.categoryNames[categoryIndex]
+      'newTaskForm.category': category
     })
   },
 
   onNewTaskInput(event) {
     const field = event.currentTarget.dataset.field
-    this.setData({ [`newTaskForm.${field}`]: event.detail.value })
+    this.newTaskDraft = {
+      ...(this.newTaskDraft || this.data.newTaskForm),
+      [field]: event.detail.value
+    }
+  },
+
+  onNewTaskBlur(event) {
+    const field = event.currentTarget.dataset.field
+    if (!field || !this.newTaskDraft) return
+    this.setData({ [`newTaskForm.${field}`]: this.newTaskDraft[field] })
   },
 
   submitNewTask() {
-    const form = this.data.newTaskForm
+    const form = {
+      ...this.data.newTaskForm,
+      ...(this.newTaskDraft || {})
+    }
     const name = String(form.name || '').trim()
     if (!name) {
       wx.showToast({ title: '请填写事项名称', icon: 'none' })
@@ -154,6 +175,7 @@ Page({
       }].concat(this.data.tasks),
       showAddModal: false
     })
+    this.newTaskDraft = {}
   },
 
   onCategoryChange(event) {
@@ -167,7 +189,20 @@ Page({
 
   onInput(event) {
     const { index, field } = event.currentTarget.dataset
-    this.setData({ [`tasks[${index}].${field}`]: event.detail.value })
+    if (index === undefined || !field) return
+    const key = String(index)
+    this.taskDrafts[key] = {
+      ...(this.taskDrafts[key] || {}),
+      [field]: event.detail.value
+    }
+  },
+
+  onInputBlur(event) {
+    const { index, field } = event.currentTarget.dataset
+    if (index === undefined || !field) return
+    const draft = this.taskDrafts[String(index)]
+    if (!draft || !Object.prototype.hasOwnProperty.call(draft, field)) return
+    this.setData({ [`tasks[${index}].${field}`]: draft[field] })
   },
 
   onEnabledChange(event) {
@@ -179,11 +214,15 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const tasks = this.data.tasks.slice()
     tasks.splice(index, 1)
+    this.taskDrafts = {}
     this.setData({ tasks })
   },
 
   async save() {
-    const tasks = this.data.tasks.map((task) => ({
+    const tasks = this.data.tasks.map((task, index) => ({
+      ...task,
+      ...(this.taskDrafts[String(index)] || {})
+    })).map((task) => ({
       _id: task.isNew ? '' : task._id,
       category: task.category,
       name: task.name.trim(),

@@ -83,7 +83,6 @@ Page({
     trend: [],
     wishes: [],
     expenses: [],
-    exchangeItems: [],
     exchangeGroups: [],
     exchangeCategories: EXCHANGE_CATEGORIES,
     exchangeCategoryIndex: 0,
@@ -115,18 +114,22 @@ Page({
     savingWish: false,
     savingExpense: false,
     savingExchange: false,
-    exchangeLoaded: false,
     exchangeConfirmVisible: false,
     activeExchangeItem: null,
     exchangeEditAuthVisible: false,
     exchangeEditPin: '',
     exchangeEditPinVisible: false,
-    pendingEditExchangeId: '',
     verifyingExchangeEdit: false,
     coinSpinVisible: false,
     coinDelta: 0,
     coinAnimating: false,
     lastRedeemedExchangeId: ''
+  },
+
+  onLoad() {
+    this.exchangeItems = []
+    this.exchangeLoaded = false
+    this.pendingEditExchangeId = ''
   },
 
   onShow() {
@@ -160,12 +163,12 @@ Page({
     const cacheKey = `wallet_cache_${app.globalData.activeChildId}`
     const cached = wx.getStorageSync(cacheKey)
     if (cached && cached.totalCoins !== undefined) {
+      this.exchangeItems = cached.exchangeItems || []
       this.setData({
         totalCoins: cached.totalCoins || 0,
         streakDays: cached.streakDays || 0,
         wishes: cached.wishes || [],
         expenses: this.decorateExpenses(cached.expenses || []),
-        exchangeItems: cached.exchangeItems || [],
         exchangeGroups: cached.exchangeGroups || [],
         trend: cached.trend || []
       })
@@ -215,7 +218,7 @@ Page({
         const localOnly = this.data.wishes.filter((item) => item._id && !cloudIds.has(item._id))
         wishes = localOnly.concat(wishes)
       }
-      const exchangeItems = this.data.exchangeItems.length ? this.data.exchangeItems : DEFAULT_EXCHANGE_ITEMS
+      const exchangeItems = this.exchangeItems.length ? this.exchangeItems : DEFAULT_EXCHANGE_ITEMS
       const calendarDays = calendar.days || []
       const weekExpenseMap = {}
       const weekExpenseCountMap = {}
@@ -240,7 +243,6 @@ Page({
         streakDays: detail.streakDays || 0,
         wishes,
         expenses: this.decorateExpenses(detail.expenses || []),
-        exchangeItems,
         exchangeGroups: this.groupExchangeItems(exchangeItems),
         trend: calendarDays.map((day) => {
           const incomeAmount = Number(day.incomeAmount !== undefined ? day.incomeAmount : day.total || 0)
@@ -261,10 +263,11 @@ Page({
           }
         })
       }
+      this.exchangeItems = exchangeItems
       this.setData(walletData)
       this.walletLoadedAt = Date.now()
-      wx.setStorageSync(cacheKey, walletData)
-      if (this.data.activeModule === 'exchange' && !this.data.exchangeLoaded) {
+      wx.setStorageSync(cacheKey, { ...walletData, exchangeItems })
+      if (this.data.activeModule === 'exchange' && !this.exchangeLoaded) {
         this.loadExchangeItems()
       }
       done(`wishes=${wishes.length} expenses=${walletData.expenses.length}`)
@@ -397,7 +400,7 @@ Page({
       streakDays: this.data.streakDays,
       wishes: this.data.wishes,
       expenses: this.data.expenses,
-      exchangeItems: this.data.exchangeItems,
+      exchangeItems: this.exchangeItems,
       exchangeGroups: this.data.exchangeGroups,
       trend: this.data.trend,
       ...partial
@@ -412,7 +415,7 @@ Page({
       activeModule: module,
       activeModuleIndex: index
     })
-    if (module === 'exchange' && !this.data.exchangeLoaded) {
+    if (module === 'exchange' && !this.exchangeLoaded) {
       this.loadExchangeItems()
     }
   },
@@ -425,18 +428,18 @@ Page({
         includeExchangeItems: true
       })
       const exchangeItems = detail.exchangeItems || DEFAULT_EXCHANGE_ITEMS
+      this.exchangeItems = exchangeItems
+      this.exchangeLoaded = true
       this.setData({
-        exchangeItems,
-        exchangeGroups: this.groupExchangeItems(exchangeItems),
-        exchangeLoaded: true
+        exchangeGroups: this.groupExchangeItems(exchangeItems)
       })
       this.updateWalletCache({ exchangeItems, exchangeGroups: this.groupExchangeItems(exchangeItems) })
     } catch (error) {
       const exchangeItems = DEFAULT_EXCHANGE_ITEMS
+      this.exchangeItems = exchangeItems
+      this.exchangeLoaded = true
       this.setData({
-        exchangeItems,
-        exchangeGroups: this.groupExchangeItems(exchangeItems),
-        exchangeLoaded: true
+        exchangeGroups: this.groupExchangeItems(exchangeItems)
       })
       this.updateWalletCache({ exchangeItems, exchangeGroups: this.groupExchangeItems(exchangeItems) })
     }
@@ -929,8 +932,8 @@ Page({
   editExchange(event) {
     const itemId = event.currentTarget.dataset.id
     if (!itemId) return
+    this.pendingEditExchangeId = itemId
     this.setData({
-      pendingEditExchangeId: itemId,
       exchangeEditAuthVisible: true,
       exchangeEditPin: '',
       exchangeEditPinVisible: false
@@ -939,11 +942,11 @@ Page({
 
   closeExchangeEditAuth() {
     if (this.data.verifyingExchangeEdit) return
+    this.pendingEditExchangeId = ''
     this.setData({
       exchangeEditAuthVisible: false,
       exchangeEditPin: '',
-      exchangeEditPinVisible: false,
-      pendingEditExchangeId: ''
+      exchangeEditPinVisible: false
     })
   },
 
@@ -966,14 +969,14 @@ Page({
         action: 'verifyPin',
         pin: this.data.exchangeEditPin
       })
-      const item = this.findExchangeItem(this.data.pendingEditExchangeId)
+      const item = this.findExchangeItem(this.pendingEditExchangeId)
       if (!item) throw new Error('兑换物品不存在')
       this.enterExchangeEdit(item)
+      this.pendingEditExchangeId = ''
       this.setData({
         exchangeEditAuthVisible: false,
         exchangeEditPin: '',
-        exchangeEditPinVisible: false,
-        pendingEditExchangeId: ''
+        exchangeEditPinVisible: false
       })
     } catch (error) {
       showError(error, error.message || '验证失败')

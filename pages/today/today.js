@@ -14,7 +14,6 @@ Page({
     dailyTotal: 0,
     categories: [],
     submittingTaskId: '',
-    loadingToday: false,
     celebrationVisible: false,
     encourageVisible: false,
     confetti: Array.from({ length: 10 }, (_, index) => ({ id: index }))
@@ -60,14 +59,12 @@ Page({
         childAvatarLoadError: false,
         childAvatarPlaceholder: '星',
         categories: [],
-        dailyTotal: 0,
-        loadingToday: false
+        dailyTotal: 0
       })
       return
     }
     const requestId = Date.now()
     this.todayRequestId = requestId
-    this.setData({ loadingToday: true })
     try {
       const detail = await callCloud('getDailyDetail', {
         childId: child._id,
@@ -83,12 +80,10 @@ Page({
         childAvatarLoadError: false,
         childAvatarPlaceholder: child.nickname ? child.nickname.slice(0, 1) : (child.gender === 'girl' ? '花' : '星'),
         dailyTotal: detail.dailyTotal || 0,
-        categories: taskStatus.applyTaskStatusGroups(detail.categories || [], child._id),
-        loadingToday: false
+        categories: taskStatus.applyTaskStatusGroups(detail.categories || [], child._id)
       })
       done(`tasks=${(detail.categories || []).reduce((sum, group) => sum + (group.tasks || []).length, 0)}`)
     } catch (error) {
-      if (this.todayRequestId === requestId) this.setData({ loadingToday: false })
       showError(error)
     }
   },

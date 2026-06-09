@@ -5,30 +5,31 @@ const { syncTab } = require('../../utils/tabbar')
 Page({
   data: {
     mode: 'week',
-    modeIndex: 0,
-    currentDate: formatDate(),
     today: formatDate(),
     watermarkMonth: new Date().getMonth() + 1,
-    swipeStartX: 0,
-    swipeStartY: 0,
-    swipeLastX: 0,
-    swipeLastTime: 0,
-    swipeVelocity: 0,
     panelWidth: 375,
     dragOffset: 0,
     trackTransition: 'none',
     isDragging: false,
     isAnimating: false,
-    canGoPrev: true,
-    canGoNext: true,
     minDate: '2020-01-01',
-    maxDate: '',
     weekdays: ['星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'],
     days: [],
     panels: [],
     selectedDate: formatDate(),
     selectedTasks: [],
     selectedExpenses: []
+  },
+
+  onLoad() {
+    this.currentDate = formatDate()
+    this.canGoPrev = true
+    this.canGoNext = true
+    this.swipeStartX = 0
+    this.swipeStartY = 0
+    this.swipeLastX = 0
+    this.swipeLastTime = 0
+    this.swipeVelocity = 0
   },
 
   onShow() {
@@ -58,7 +59,7 @@ Page({
     const requestId = Date.now()
     this.calendarRequestId = requestId
     try {
-      const viewDate = this.getViewDate(this.data.currentDate)
+      const viewDate = this.getViewDate(this.currentDate)
       const panelDates = [-1, 0, 1].map((offset) => this.getShiftedDate(viewDate, offset))
       const ranges = panelDates.map((date) => this.getPanelRange(date))
       const results = await Promise.all(ranges.map((range) => callCloud('getCalendarSummary', {
@@ -79,11 +80,11 @@ Page({
       this.setData({
         today,
         watermarkMonth: viewDate.getMonth() + 1,
-        canGoPrev: this.canNavigate(viewDate, -1),
-        canGoNext: this.canNavigate(viewDate, 1),
         days: panels[1] ? panels[1].days : [],
         panels
       })
+      this.canGoPrev = this.canNavigate(viewDate, -1)
+      this.canGoNext = this.canNavigate(viewDate, 1)
       this.loadDetail(this.data.selectedDate)
       done(`mode=${this.data.mode}`)
     } catch (error) {
@@ -95,8 +96,8 @@ Page({
     const mode = event.currentTarget.dataset.mode
     if (mode === this.data.mode) {
       const today = formatDate()
+      this.currentDate = today
       this.setData({
-        currentDate: today,
         selectedDate: today,
         selectedTasks: [],
         selectedExpenses: [],
@@ -109,14 +110,13 @@ Page({
     }
     this.setData({
       mode,
-      modeIndex: mode === 'week' ? 0 : 1,
-      currentDate: formatDate(),
       selectedDate: formatDate(),
       selectedTasks: [],
       selectedExpenses: [],
       dragOffset: 0,
       trackTransition: 'transform 220ms ease'
     })
+    this.currentDate = formatDate()
     this.loadCalendar()
     this.clearTrackTransition()
   },
@@ -179,7 +179,7 @@ Page({
       return
     }
     const direction = deltaX < 0 ? -1 : 1
-    if ((direction < 0 && !this.data.canGoPrev) || (direction > 0 && !this.data.canGoNext)) {
+    if ((direction < 0 && !this.canGoPrev) || (direction > 0 && !this.canGoNext)) {
       this.showBoundaryToast()
       this.snapBack()
       return
@@ -203,7 +203,7 @@ Page({
   },
 
   shiftCalendar(direction) {
-    const date = this.getViewDate(this.data.currentDate)
+    const date = this.getViewDate(this.currentDate)
     if (this.data.mode === 'week') {
       date.setDate(date.getDate() - direction * 7)
     } else {
@@ -212,8 +212,8 @@ Page({
     const panels = this.getRotatedPanels(direction)
     const centerPanel = panels[1] || { days: [] }
     const nextDate = formatDate(date)
+    this.currentDate = nextDate
     this.setData({
-      currentDate: formatDate(date),
       selectedDate: nextDate,
       selectedTasks: [],
       selectedExpenses: [],
@@ -254,7 +254,7 @@ Page({
   },
 
   getBoundedOffset(deltaX) {
-    if ((deltaX < 0 && !this.data.canGoPrev) || (deltaX > 0 && !this.data.canGoNext)) {
+    if ((deltaX < 0 && !this.canGoPrev) || (deltaX > 0 && !this.canGoNext)) {
       return deltaX * 0.28
     }
     return Math.max(-this.data.panelWidth, Math.min(this.data.panelWidth, deltaX))

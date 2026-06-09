@@ -8,10 +8,10 @@
     <view class="profile-section-title">小朋友档案</view>
 
     <view class="profile-actions">
-      <button class="icon-hit refresh-button" aria-label="刷新档案" bindtap="reload">
+      <button class="icon-hit refresh-button" hover-class="icon-hit-hover" bindtap="reload">
         <text class="icon-dot">↻</text>
       </button>
-      <button class="icon-hit add-profile-button" aria-label="新增档案" bindtap="openCreateModal">
+      <button class="icon-hit add-profile-button" hover-class="icon-hit-hover" bindtap="openCreateModal">
         <text class="icon-dot">+</text>
       </button>
     </view>
@@ -39,13 +39,13 @@
   </view>
 
   <view class="quick-actions grid-two">
-    <button class="secondary-button" bindtap="goTemplates">模板预览</button>
-    <button class="secondary-button" bindtap="goSettings">家长设置</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goTemplates">模板预览</button>
+    <button class="secondary-button" hover-class="button-hover" bindtap="goSettings">家长设置</button>
   </view>
 
   <view wx:if="{{showCreateModal}}" class="modal-mask centered" catchtap="closeCreateModal">
     <view class="profile-modal bounce-in" catchtap="noop">
-      <button class="close-button" bindtap="closeCreateModal">×</button>
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeCreateModal">×</button>
       <view class="modal-header simple-header">
         <view class="modal-title">新增档案</view>
       </view>
@@ -76,14 +76,14 @@
             </view>
           </picker>
         </view>
-        <button class="primary-button" loading="{{saving}}" bindtap="createProfile">创建</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{saving}}" bindtap="createProfile">创建</button>
       </view>
     </view>
   </view>
 
   <view wx:if="{{showTaskModal}}" class="modal-mask centered" catchtap="closeTaskDetail">
     <view class="task-modal bounce-in" catchtap="noop">
-      <button class="close-button" bindtap="closeTaskDetail">×</button>
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskDetail">×</button>
       <view class="modal-header">
         <view>
           <view class="modal-title compact">{{taskDetailName}}的任务</view>
@@ -125,7 +125,7 @@
 
   <view wx:if="{{showTaskEditor}}" class="modal-mask centered" catchtap="closeTaskEditor">
     <view class="task-editor bounce-in" catchtap="noop">
-      <button class="close-button" bindtap="closeTaskEditor">×</button>
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskEditor">×</button>
       <view class="modal-header">
         <view class="modal-title compact">修改任务</view>
       </view>
@@ -148,14 +148,14 @@
             <input class="field" type="number" value="{{editTask.penaltyCoins}}" data-field="penaltyCoins" bindinput="onEditTaskInput" />
           </view>
         </view>
-        <button class="primary-button" loading="{{taskSaving}}" bindtap="saveTaskEdit">保存修改</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{taskSaving}}" bindtap="saveTaskEdit">保存修改</button>
       </view>
     </view>
   </view>
 
   <view wx:if="{{showTaskDeleteAuth}}" class="modal-mask centered task-delete-mask" catchtap="closeTaskDeleteAuth">
     <view class="task-delete-modal bounce-in" catchtap="noop">
-      <button class="close-button" bindtap="closeTaskDeleteAuth">×</button>
+      <button class="close-button" hover-class="close-button-hover" bindtap="closeTaskDeleteAuth">×</button>
       <view class="modal-header">
         <view>
           <view class="modal-title compact">家长验证</view>
@@ -169,8 +169,8 @@
           <button class="pin-toggle" bindtap="toggleTaskDeletePinVisible">{{taskDeletePinVisible ? '隐藏' : '显示'}}</button>
         </view>
         <view class="task-delete-actions">
-          <button class="secondary-button task-delete-action-button" bindtap="closeTaskDeleteAuth">取消</button>
-          <button class="danger-button task-delete-action-button" loading="{{taskDeleting}}" bindtap="confirmTaskDeleteAuth">确认删除</button>
+          <button class="secondary-button task-delete-action-button" hover-class="button-hover" bindtap="closeTaskDeleteAuth">取消</button>
+          <button class="danger-button task-delete-action-button" hover-class="button-hover" loading="{{taskDeleting}}" bindtap="confirmTaskDeleteAuth">确认删除</button>
         </view>
       </view>
     </view>

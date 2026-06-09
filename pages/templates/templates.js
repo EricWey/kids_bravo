@@ -8,7 +8,6 @@ Page({
       { value: 'vacation', label: '寒暑假模版' }
     ],
     activeType: 'daily',
-    templates: [],
     templateOptions: [],
     templateIndex: 0,
     currentTemplate: null,
@@ -20,6 +19,7 @@ Page({
   },
 
   onLoad() {
+    this.templates = []
     this.loadTemplates()
   },
 
@@ -32,9 +32,9 @@ Page({
         displayLabel: this.getTemplateLabel(item)
       }))
       const currentTemplate = nextTemplates[0] || null
+      this.templates = nextTemplates
 
       this.setData({
-        templates: nextTemplates,
         templateOptions: nextTemplates.map((item) => item.displayLabel),
         templateIndex: 0,
         currentTemplate
@@ -66,7 +66,7 @@ Page({
     const templateIndex = Number(event.detail.value)
     this.setData({
       templateIndex,
-      currentTemplate: this.data.templates[templateIndex] || null
+      currentTemplate: this.templates[templateIndex] || null
     })
   },
 

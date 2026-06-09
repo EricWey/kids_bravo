@@ -24,11 +24,6 @@ Page({
     pendingDeleteTaskIndex: -1,
     taskDeletePin: '',
     taskDeletePinVisible: false,
-    refreshing: false,
-    lastRefreshAt: 0,
-    touchStartX: 0,
-    touchingIndex: -1,
-    profileSwipeOpen: false,
     taskTouchStartX: 0,
     taskTouchingIndex: -1,
     taskTouchingGroupIndex: -1,
@@ -39,7 +34,6 @@ Page({
       { value: 'vacation', label: '寒暑假模版' }
     ],
     activeTemplateType: 'daily',
-    templates: [],
     templateOptions: [],
     templateIndex: 0,
     currentTemplate: null,
@@ -50,6 +44,12 @@ Page({
   },
 
   onLoad() {
+    this.templates = []
+    this.refreshing = false
+    this.lastRefreshAt = 0
+    this.touchStartX = 0
+    this.touchingIndex = -1
+    this.profileSwipeOpen = false
     this.unsubscribeTaskStatus = taskStatus.subscribe((change) => this.applyTaskStatusChange(change))
     this.loadTemplates()
   },
@@ -65,7 +65,7 @@ Page({
 
   async openCreateModal() {
     this.setData({ showCreateModal: true })
-    if (!this.data.templates.length) {
+    if (!this.templates.length) {
       await this.loadTemplates()
     }
   },
@@ -103,7 +103,7 @@ Page({
     if (this.data.taskSwipeOpen && this.data.taskTouchingIndex < 0) {
       this.closeTaskSwipe()
     }
-    if (this.data.profileSwipeOpen && this.data.touchingIndex < 0) {
+    if (this.profileSwipeOpen && this.touchingIndex < 0) {
       this.closeSwipe()
     }
   },
@@ -157,10 +157,10 @@ Page({
       avatarPlaceholder: child.nickname ? child.nickname.slice(0, 1) : '星',
       offsetX: 0
     }))
+    this.profileSwipeOpen = children.some((child) => child.offsetX < 0)
     this.setData({
       children,
-      activeChildId: app.globalData.activeChildId,
-      profileSwipeOpen: children.some((child) => child.offsetX < 0)
+      activeChildId: app.globalData.activeChildId
     })
   },
 
@@ -177,8 +177,8 @@ Page({
         displayLabel: this.getTemplateLabel(item)
       }))
       const currentTemplate = nextTemplates[0] || null
+      this.templates = nextTemplates
       this.setData({
-        templates: nextTemplates,
         templateOptions: nextTemplates.map((item) => item.displayLabel),
         templateIndex: 0,
         currentTemplate,
@@ -206,8 +206,9 @@ Page({
   async refreshChildren(options = {}) {
     const now = Date.now()
     const minInterval = options.minInterval === undefined ? 1000 : options.minInterval
-    if (this.data.refreshing || (minInterval && now - this.data.lastRefreshAt < minInterval)) return
-    this.setData({ refreshing: true, lastRefreshAt: now })
+    if (this.refreshing || (minInterval && now - this.lastRefreshAt < minInterval)) return
+    this.refreshing = true
+    this.lastRefreshAt = now
     try {
       const { children = [] } = await callCloud('getOpenId')
       app.updateChildren(children)
@@ -218,7 +219,7 @@ Page({
     } catch (error) {
       if (!options.silent) showError(error)
     } finally {
-      this.setData({ refreshing: false })
+      this.refreshing = false
     }
   },
 
@@ -530,44 +531,42 @@ Page({
 
   onTouchStart(event) {
     const index = Number(event.currentTarget.dataset.index)
-    if (this.data.profileSwipeOpen && this.data.children[index] && this.data.children[index].offsetX === 0) {
+    if (this.profileSwipeOpen && this.data.children[index] && this.data.children[index].offsetX === 0) {
       this.closeSwipe()
       return
     }
-    this.setData({
-      touchStartX: event.touches[0].clientX,
-      touchingIndex: index
-    })
+    this.touchStartX = event.touches[0].clientX
+    this.touchingIndex = index
   },
 
   onTouchMove(event) {
-    const index = this.data.touchingIndex
+    const index = this.touchingIndex
     if (index < 0) return
-    const deltaX = event.touches[0].clientX - this.data.touchStartX
+    const deltaX = event.touches[0].clientX - this.touchStartX
     const offsetX = Math.max(-78, Math.min(0, deltaX))
+    this.profileSwipeOpen = offsetX < 0 || this.data.children.some((child, childIndex) => childIndex !== index && child.offsetX < 0)
     this.setData({
-      [`children[${index}].offsetX`]: offsetX,
-      profileSwipeOpen: offsetX < 0 || this.data.children.some((child, childIndex) => childIndex !== index && child.offsetX < 0)
+      [`children[${index}].offsetX`]: offsetX
     })
   },
 
   onTouchEnd() {
-    const index = this.data.touchingIndex
+    const index = this.touchingIndex
     if (index < 0) return
     const offsetX = this.data.children[index].offsetX < -36 ? -78 : 0
+    this.touchingIndex = -1
+    this.profileSwipeOpen = offsetX < 0
     this.setData({
-      [`children[${index}].offsetX`]: offsetX,
-      touchingIndex: -1,
-      profileSwipeOpen: offsetX < 0
+      [`children[${index}].offsetX`]: offsetX
     })
   },
 
   closeSwipe() {
     const children = this.data.children.map((child) => ({ ...child, offsetX: 0 }))
+    this.touchingIndex = -1
+    this.profileSwipeOpen = false
     this.setData({
-      children,
-      touchingIndex: -1,
-      profileSwipeOpen: false
+      children
     })
   },
 
@@ -750,7 +749,7 @@ Page({
 
   onTemplateChange(event) {
     const templateIndex = Number(event.detail.value)
-    const currentTemplate = this.data.templates[templateIndex] || null
+    const currentTemplate = this.templates[templateIndex] || null
     this.setData({
       templateIndex,
       currentTemplate,

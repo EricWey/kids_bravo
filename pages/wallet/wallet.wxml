@@ -50,7 +50,7 @@
           <view class="coin-pill">{{item.costCoins}} 金币</view>
           <view class="progress-text">{{item.statusLine}}</view>
         </view>
-        <view class="progress-ring {{item.progressClass}} {{item.isComplete ? 'complete' : ''}}" aria-label="愿望进度">
+        <view class="progress-ring {{item.progressClass}} {{item.isComplete ? 'complete' : ''}}">
           <text wx:if="{{item.isComplete}}" class="progress-check">✓</text>
           <text wx:else class="progress-percent">{{item.progressDisplay}}</text>
         </view>
@@ -63,7 +63,7 @@
       <input class="field" placeholder="愿望名称，例如：滑板车" value="{{wishForm.name}}" data-field="name" bindinput="onWishInput" />
       <view class="coin-input-row">
         <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{wishForm.costCoins}}" data-field="costCoins" bindinput="onWishInput" />
-        <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage" aria-label="添加图片">
+        <button class="wish-photo-icon {{wishForm.imageTempPath || wishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseWishImage">
           <image wx:if="{{wishForm.imageTempPath || wishForm.imageFileId}}" class="wish-photo-thumb" src="{{wishForm.imageTempPath || wishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
           <view wx:else class="camera-glyph">
             <view class="camera-top"></view>
@@ -75,8 +75,8 @@
       </view>
       <view class="image-helper-text">{{wishForm.imageTempPath || wishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
       <view class="form-actions">
-        <button class="secondary-button" wx:if="{{wishForm.wishId}}" bindtap="resetWishForm">取消编辑</button>
-        <button class="primary-button" loading="{{savingWish}}" bindtap="saveWish">{{wishForm.wishId ? '保存愿望' : '加入清单'}}</button>
+        <button class="secondary-button" wx:if="{{wishForm.wishId}}" hover-class="button-hover" bindtap="resetWishForm">取消编辑</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{savingWish}}" bindtap="saveWish">{{wishForm.wishId ? '保存愿望' : '加入清单'}}</button>
       </view>
     </view>
 
@@ -86,8 +86,8 @@
         <view class="edit-title">愿望操作</view>
         <view class="wish-action-name">{{activeWishName}}</view>
         <view class="wish-action-actions">
-          <button class="secondary-button wish-action-button" bindtap="openEditWishDialog">编辑</button>
-          <button class="danger-button wish-action-button" bindtap="confirmDeleteActiveWish">删除</button>
+          <button class="secondary-button wish-action-button" hover-class="button-hover" bindtap="openEditWishDialog">编辑</button>
+          <button class="danger-button wish-action-button" hover-class="button-hover" bindtap="confirmDeleteActiveWish">删除</button>
         </view>
       </view>
     </view>
@@ -98,7 +98,7 @@
         <input class="field" placeholder="愿望名称" value="{{editingWishForm.name}}" data-field="name" bindinput="onEditingWishInput" />
         <view class="coin-input-row">
           <input class="field coin-input" type="number" placeholder="需要多少金币" value="{{editingWishForm.costCoins}}" data-field="costCoins" bindinput="onEditingWishInput" />
-          <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage" aria-label="添加图片">
+          <button class="wish-photo-icon {{editingWishForm.imageTempPath || editingWishForm.imageFileId ? 'has-photo' : ''}}" bindtap="chooseEditingWishImage">
             <image wx:if="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" class="wish-photo-thumb" src="{{editingWishForm.imageTempPath || editingWishForm.imageFileId}}" mode="aspectFill" lazy-load></image>
             <view wx:else class="camera-glyph">
               <view class="camera-top"></view>
@@ -110,8 +110,8 @@
         </view>
         <view class="image-helper-text">{{editingWishForm.imageTempPath || editingWishForm.imageFileId ? '已选择图片' : '添加图片：可拍照或从相册选择'}}</view>
         <view class="form-actions">
-          <button class="secondary-button" bindtap="closeEditWishDialog">取消</button>
-          <button class="primary-button" loading="{{savingWish}}" bindtap="saveEditingWish">保存</button>
+          <button class="secondary-button" hover-class="button-hover" bindtap="closeEditWishDialog">取消</button>
+          <button class="primary-button" hover-class="button-hover" loading="{{savingWish}}" bindtap="saveEditingWish">保存</button>
         </view>
       </view>
     </view>
@@ -130,7 +130,7 @@
       <input class="field" placeholder="购买了什么" value="{{expenseForm.itemName}}" data-field="itemName" bindinput="onExpenseInput" />
       <view class="coin-input-row">
         <input class="field coin-input" type="number" placeholder="花了多少金币" value="{{expenseForm.amount}}" data-field="amount" bindinput="onExpenseInput" />
-        <button class="wish-photo-icon {{expenseForm.photoTempPath || expenseForm.photoFileId ? 'has-photo' : ''}}" bindtap="chooseExpensePhoto" aria-label="上传消费照片">
+        <button class="wish-photo-icon {{expenseForm.photoTempPath || expenseForm.photoFileId ? 'has-photo' : ''}}" bindtap="chooseExpensePhoto">
           <image wx:if="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" class="wish-photo-thumb" src="{{expenseForm.photoTempPath || expenseForm.photoFileId}}" mode="aspectFill" lazy-load></image>
           <view wx:else class="camera-glyph">
             <view class="camera-top"></view>
@@ -144,7 +144,7 @@
       <picker mode="date" value="{{expenseForm.date}}" bindchange="onExpenseDateChange">
         <view class="field picker-field">消费时间：{{expenseForm.date}}</view>
       </picker>
-      <button class="primary-button" loading="{{savingExpense}}" bindtap="saveExpense">记录支出</button>
+      <button class="primary-button" hover-class="button-hover" loading="{{savingExpense}}" bindtap="saveExpense">记录支出</button>
     </view>
 
     <view class="filter-row">
@@ -183,8 +183,8 @@
           <button class="pin-toggle" bindtap="toggleDeleteExpensePinVisible">{{deleteExpensePinVisible ? '隐藏' : '显示'}}</button>
         </view>
         <view class="exchange-confirm-actions">
-          <button class="secondary-button exchange-confirm-button" bindtap="closeDeleteExpenseDialog">取消</button>
-          <button class="danger-button exchange-confirm-button" loading="{{deletingExpense}}" bindtap="confirmDeleteExpenseAuth">确认</button>
+          <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeDeleteExpenseDialog">取消</button>
+          <button class="danger-button exchange-confirm-button" hover-class="button-hover" loading="{{deletingExpense}}" bindtap="confirmDeleteExpenseAuth">确认</button>
         </view>
       </view>
     </view>
@@ -202,11 +202,11 @@
             <view class="exchange-desc">{{entry.description}}</view>
           </view>
           <view class="mini-actions">
-            <button class="exchange-action-button edit {{entry.preset ? 'solo' : ''}}" data-id="{{entry._id}}" bindtap="editExchange">
+            <button class="exchange-action-button edit {{entry.preset ? 'solo' : ''}}" hover-class="exchange-action-button-hover" data-id="{{entry._id}}" bindtap="editExchange">
               <image class="exchange-action-icon" src="/assets/wish-icons/paint.png" mode="aspectFill" lazy-load></image>
               <text>编辑</text>
             </button>
-            <button wx:if="{{!entry.preset}}" class="exchange-action-button danger" data-id="{{entry._id}}" bindtap="deleteExchange">
+            <button wx:if="{{!entry.preset}}" class="exchange-action-button danger" hover-class="exchange-action-button-hover" data-id="{{entry._id}}" bindtap="deleteExchange">
               <image class="exchange-action-icon" src="/assets/wish-icons/gift.png" mode="aspectFill" lazy-load></image>
               <text>下架</text>
             </button>
@@ -224,7 +224,7 @@
       </picker>
       <textarea class="field textarea" placeholder="简短描述" value="{{exchangeForm.description}}" data-field="description" bindinput="onExchangeInput"></textarea>
       <view class="form-actions">
-        <button class="primary-button" loading="{{savingExchange}}" bindtap="saveExchangeItem">上架兑换项</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{savingExchange}}" bindtap="saveExchangeItem">上架兑换项</button>
       </view>
     </view>
   </view>
@@ -239,8 +239,8 @@
       </picker>
       <textarea class="field textarea" placeholder="简短描述" value="{{exchangeEditForm.description}}" data-field="description" bindinput="onExchangeEditInput"></textarea>
       <view class="form-actions">
-        <button class="secondary-button" bindtap="closeExchangeEditDialog">取消</button>
-        <button class="primary-button" loading="{{savingExchange}}" bindtap="saveExchangeEditItem">保存</button>
+        <button class="secondary-button" hover-class="button-hover" bindtap="closeExchangeEditDialog">取消</button>
+        <button class="primary-button" hover-class="button-hover" loading="{{savingExchange}}" bindtap="saveExchangeEditItem">保存</button>
       </view>
     </view>
   </view>
@@ -255,8 +255,8 @@
         <button class="pin-toggle" bindtap="toggleExchangeEditPinVisible">{{exchangeEditPinVisible ? '隐藏' : '显示'}}</button>
       </view>
       <view class="exchange-confirm-actions">
-        <button class="secondary-button exchange-confirm-button" bindtap="closeExchangeEditAuth">取消</button>
-        <button class="primary-button exchange-confirm-button" loading="{{verifyingExchangeEdit}}" bindtap="confirmExchangeEditAuth">确认</button>
+        <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeExchangeEditAuth">取消</button>
+        <button class="primary-button exchange-confirm-button" hover-class="button-hover" loading="{{verifyingExchangeEdit}}" bindtap="confirmExchangeEditAuth">确认</button>
       </view>
     </view>
   </view>
@@ -269,13 +269,13 @@
       <view class="exchange-confirm-cost">需要 {{activeExchangeItem.costCoins}} 金币</view>
       <view class="exchange-confirm-tip">确认后会从当前金币余额中扣除。</view>
       <view class="exchange-confirm-actions">
-        <button class="secondary-button exchange-confirm-button" bindtap="closeExchangeConfirm">取消</button>
-        <button class="primary-button exchange-confirm-button" loading="{{coinAnimating}}" bindtap="confirmExchangeRedeem">确认</button>
+        <button class="secondary-button exchange-confirm-button" hover-class="button-hover" bindtap="closeExchangeConfirm">取消</button>
+        <button class="primary-button exchange-confirm-button" hover-class="button-hover" loading="{{coinAnimating}}" bindtap="confirmExchangeRedeem">确认</button>
       </view>
     </view>
   </view>
 
-  <view wx:if="{{coinSpinVisible}}" class="coin-spin-layer" aria-label="兑换动画">
+  <view wx:if="{{coinSpinVisible}}" class="coin-spin-layer">
     <view class="coin-spin-card">
       <view class="spinning-coin">金</view>
       <view class="coin-delta">-{{coinDelta}}</view>

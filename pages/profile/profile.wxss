@@ -36,7 +36,7 @@
   background: transparent;
 }
 
-.icon-hit:active .icon-dot {
+.icon-hit-hover .icon-dot {
   transform: scale(0.86);
   filter: brightness(0.96);
 }
@@ -313,7 +313,7 @@
   background: transparent;
 }
 
-.close-button:active {
+.close-button-hover {
   transform: scale(0.92) translateY(3rpx);
   filter: brightness(0.96);
   border-radius:50%

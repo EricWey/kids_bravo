@@ -25,7 +25,7 @@
   transition: transform 140ms ease, filter 140ms ease;
 }
 
-.hero-avatar-button:active {
+.hero-avatar-button-hover {
   transform: scale(0.95);
   filter: brightness(0.98);
 }
@@ -103,7 +103,7 @@
   animation: resetPop 220ms ease both;
 }
 
-.reset-button:active {
+.reset-button-hover {
   transform: scale(0.94);
 }
 
@@ -179,13 +179,13 @@
 }
 
 /* ========== 点击按压效果（保留原有交互手感） ========== */
-.miss-button:active {
+.miss-button-hover {
   transform: scale(0.98);
   filter: brightness(0.94);
   background: #ff7373;
   color: #ffffff;
 }
-.done-button:active {
+.done-button-hover {
   transform: scale(0.98);
   filter: brightness(0.94);
   background: #45c4b0;

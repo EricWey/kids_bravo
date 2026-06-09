@@ -31,7 +31,7 @@
         <view class="template-title">{{currentTemplate.displayLabel}}</view>
         <view class="muted">{{currentTemplate.typeText}}</view>
       </view>
-      <button class="primary-button small" data-id="{{currentTemplate._id}}" bindtap="applyTemplate">应用</button>
+      <button class="primary-button small" hover-class="button-hover" data-id="{{currentTemplate._id}}" bindtap="applyTemplate">应用</button>
     </view>
     <view wx:for="{{currentTemplate.categories}}" wx:key="name" wx:for-item="category" class="category-block">
       <view class="category-title">{{category.name}}</view>
@@ -57,8 +57,8 @@
         <button class="pin-toggle" bindtap="toggleTemplatePinVisible">{{templatePinVisible ? '隐藏' : '显示'}}</button>
       </view>
       <view class="template-pin-actions">
-        <button class="secondary-button template-pin-action-button" disabled="{{applying}}" bindtap="closePinModal">取消</button>
-        <button class="primary-button template-pin-action-button" loading="{{applying}}" bindtap="confirmApplyTemplate">提交</button>
+        <button class="secondary-button template-pin-action-button" hover-class="button-hover" disabled="{{applying}}" bindtap="closePinModal">取消</button>
+        <button class="primary-button template-pin-action-button" hover-class="button-hover" loading="{{applying}}" bindtap="confirmApplyTemplate">提交</button>
       </view>
     </view>
   </view>

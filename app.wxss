@@ -91,9 +91,9 @@ button::after {
   box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.1); 
 }
 
-.primary-button:active,
-.secondary-button:active,
-.danger-button:active {
+.primary-button.button-hover,
+.secondary-button.button-hover,
+.danger-button.button-hover {
   transform: scale(0.96);
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
@@ -103,7 +103,7 @@ button::after {
   background: linear-gradient(135deg, #ffd760, #ff9533);
   box-shadow: 0 6rpx 20rpx rgba(255, 165, 60, 0.3);
 }
-.primary-button:active {
+.primary-button.button-hover {
   background: linear-gradient(135deg, #ffcb45, #ff8822);
 }
 
@@ -113,7 +113,7 @@ button::after {
   background: #e6f9ff;
   box-shadow: 0 4rpx 12rpx rgba(48, 108, 128, 0.1);
 }
-.secondary-button:active {
+.secondary-button.button-hover {
   background: #d1f2fc;
 }
 

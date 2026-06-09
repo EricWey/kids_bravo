@@ -91,6 +91,11 @@
   font-weight: 900;
 }
 
+.close-button-hover {
+  transform: scale(0.92) translateY(3rpx);
+  filter: brightness(0.96);
+}
+
 .modal-title {
   margin-bottom: 24rpx;
   padding-right: 56rpx;
